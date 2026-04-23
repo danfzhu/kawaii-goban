@@ -199,10 +199,10 @@ body{
 
 <!-- Mode Switcher -->
 <div class="mode-bar">
-  <button class="mode-btn active" data-mode="go">⬤ 围棋</button>
-  <button class="mode-btn" data-mode="gomoku">✦ 五子棋</button>
-  <button class="mode-btn" data-mode="reversi">◑ 黑白棋</button>
-  <button class="mode-btn" data-mode="chess">♟ 象棋</button>
+  <button class="mode-btn active" data-mode="go">⬤ <span data-k="modeGo">Go</span></button>
+  <button class="mode-btn" data-mode="gomoku">✦ <span data-k="modeGomoku">Gomoku</span></button>
+  <button class="mode-btn" data-mode="reversi">◑ <span data-k="modeReversi">Reversi</span></button>
+  <button class="mode-btn" data-mode="chess">♟ <span data-k="modeChess">Chess</span></button>
 </div>
 
 <!-- Header -->
@@ -219,11 +219,11 @@ body{
 
 <!-- Size Selector -->
 <div class="size-selector" id="sizeBar">
-  <button class="size-btn" data-size="5">5路</button>
-  <button class="size-btn" data-size="6">6路</button>
-  <button class="size-btn" data-size="7">7路</button>
-  <button class="size-btn" data-size="8">8路</button>
-  <button class="size-btn active" data-size="9">9路</button>
+  <button class="size-btn" data-size="5">5×5</button>
+  <button class="size-btn" data-size="6">6×6</button>
+  <button class="size-btn" data-size="7">7×7</button>
+  <button class="size-btn" data-size="8">8×8</button>
+  <button class="size-btn active" data-size="9">9×9</button>
 </div>
 
 <!-- Score Bar -->
@@ -330,13 +330,17 @@ const TIPS={
   },
 };
 const TI={
-  zh:{black:'黑',white:'白',online:'联机',share:'分享',vs:'对手:',pass:'⏭ 跳过',undo:'↩ 撤棋',replay:'▶ 回放',resign:'🏳 投降','new':'✨ 新局',liberties:'数气',faces:'表情',connect:'连接',blackTurn:'黑方回合',whiteTurn:'白方回合',blackWin:'黑方胜!',whiteWin:'白方胜!',draw:'平局!',aiThink:'🤔 AI思考中...'},
-  en:{black:'B',white:'W',online:'Online',share:'Share',vs:'vs:',pass:'⏭ Pass',undo:'↩ Undo',replay:'▶ Replay',resign:'🏳 Resign','new':'✨ New',liberties:'Liberty',faces:'Emoji',connect:'Connect',blackTurn:"Black's turn",whiteTurn:"White's turn",blackWin:'Black wins!',whiteWin:'White wins!',draw:'Draw!',aiThink:'🤔 thinking...'},
+  zh:{black:'黑',white:'白',online:'联机',share:'分享',vs:'对手:',pass:'⏭ 跳过',undo:'↩ 撤棋',replay:'▶ 回放',resign:'🏳 投降','new':'✨ 新局',liberties:'数气',faces:'表情',connect:'连接',blackTurn:'黑方回合',whiteTurn:'白方回合',blackWin:'黑方胜!',whiteWin:'白方胜!',draw:'平局!',aiThink:'🤔 AI思考中...',modeGo:'围棋',modeGomoku:'五子棋',modeReversi:'黑白棋',modeChess:'象棋'},
+  en:{black:'B',white:'W',online:'Online',share:'Share',vs:'vs:',pass:'⏭ Pass',undo:'↩ Undo',replay:'▶ Replay',resign:'🏳 Resign','new':'✨ New',liberties:'Liberty',faces:'Emoji',connect:'Connect',blackTurn:"Black's turn",whiteTurn:"White's turn",blackWin:'Black wins!',whiteWin:'White wins!',draw:'Draw!',aiThink:'🤔 thinking...',modeGo:'Go',modeGomoku:'Gomoku',modeReversi:'Reversi',modeChess:'Chess'},
 };
 let lang='en';
 const t=k=>TI[lang][k]||TI.zh[k]||k;
 function applyLang(){
   document.querySelectorAll('[data-k]').forEach(el=>el.textContent=t(el.getAttribute('data-k')));
+  document.querySelectorAll('#sizeBar .size-btn').forEach(btn=>{
+    const sz=parseInt(btn.dataset.size);
+    btn.textContent=lang==='zh'?sz+'路':sz+'×'+sz;
+  });
   updateTurnDisplay();
 }
 
@@ -1677,7 +1681,7 @@ function switchMode(mode){
   for(const sz of info.sizes){
     const btn=document.createElement('button');
     btn.className='size-btn';btn.dataset.size=sz;
-    btn.textContent=sz+'路';
+    btn.textContent=lang==='zh'?sz+'路':sz+'×'+sz;
     btn.addEventListener('click',()=>startNew(sz));
     sizeBar.appendChild(btn);
   }
