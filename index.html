@@ -1672,6 +1672,7 @@ function switchMode(mode){
   document.querySelectorAll('.go-only').forEach(el=>el.style.display=mode==='go'?'':'none');
   document.querySelectorAll('.go-gom').forEach(el=>el.style.display=(mode==='go'||mode==='gomoku')?'':'none');
   document.getElementById('resignBtn').style.display=(mode==='go'||mode==='chess')?'':'none';
+  document.getElementById('replayBtn').style.display=mode==='chess'?'none':'';
   // Checkboxes
   document.getElementById('lbLib').classList.toggle('hidden',mode!=='go');
   document.getElementById('lbConn').classList.toggle('hidden',mode==='reversi'||mode==='chess');
