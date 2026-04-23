@@ -208,11 +208,11 @@ body{
 <!-- Header -->
 <div class="header">
   <div class="header-group">
-    <h1 class="title" id="mainTitle">围棋豆豆 🎴</h1>
-    <div class="title-sub" id="mainSub">Cute Go · かわいい囲碁</div>
+    <h1 class="title" id="mainTitle">Go Beans 🎴</h1>
+    <div class="title-sub" id="mainSub">Kawaii Go · Chinese rules</div>
   </div>
   <div class="header-btns">
-    <button class="header-btn" id="langBtn">EN</button>
+    <button class="header-btn" id="langBtn">中</button>
     <button class="header-btn" id="soundBtn">🔊</button>
   </div>
 </div>
@@ -333,7 +333,7 @@ const TI={
   zh:{black:'黑',white:'白',online:'联机',share:'分享',vs:'对手:',pass:'⏭ 跳过',undo:'↩ 撤棋',replay:'▶ 回放',resign:'🏳 投降','new':'✨ 新局',liberties:'数气',faces:'表情',connect:'连接',blackTurn:'黑方回合',whiteTurn:'白方回合',blackWin:'黑方胜!',whiteWin:'白方胜!',draw:'平局!',aiThink:'🤔 AI思考中...'},
   en:{black:'B',white:'W',online:'Online',share:'Share',vs:'vs:',pass:'⏭ Pass',undo:'↩ Undo',replay:'▶ Replay',resign:'🏳 Resign','new':'✨ New',liberties:'Liberty',faces:'Emoji',connect:'Connect',blackTurn:"Black's turn",whiteTurn:"White's turn",blackWin:'Black wins!',whiteWin:'White wins!',draw:'Draw!',aiThink:'🤔 thinking...'},
 };
-let lang='zh';
+let lang='en';
 const t=k=>TI[lang][k]||TI.zh[k]||k;
 function applyLang(){
   document.querySelectorAll('[data-k]').forEach(el=>el.textContent=t(el.getAttribute('data-k')));
@@ -347,10 +347,10 @@ const STAR={5:[[2,2]],6:[[1,1],[1,4],[4,1],[4,4]],7:[[2,2],[2,4],[3,3],[4,2],[4,
 const FACES=['happy','smile','wink','cool','squint','think'];
 
 const MODE_INFO={
-  go:{titles:{zh:'围棋豆豆 🎴',en:'Cute Go 🎴'},subs:{zh:'Cute Go · かわいい囲棋',en:'围棋 · かわいい囲棋'},sizes:[5,6,7,8,9],defSize:9},
-  gomoku:{titles:{zh:'五子棋豆豆 ✦',en:'Gomoku ✦'},subs:{zh:'连五子者胜！',en:'Five in a Row!'},sizes:[9,11,13,15],defSize:15},
-  reversi:{titles:{zh:'黑白棋豆豆 ◑',en:'Reversi ◑'},subs:{zh:'翻转棋 · オセロ',en:'Othello · 翻转棋'},sizes:[8],defSize:8},
-  chess:{titles:{zh:'象棋豆豆 ♟',en:'Xiangqi ♟'},subs:{zh:'中国象棋 · 红先黑后',en:'Chinese Chess · Red first'},sizes:[9],defSize:9},
+  go:{titles:{zh:'围棋豆豆 🎴',en:'Go Beans 🎴'},subs:{zh:'可爱围棋 · 中国规则',en:'Kawaii Go · Chinese rules'},sizes:[5,6,7,8,9],defSize:9},
+  gomoku:{titles:{zh:'五子棋豆豆 ✦',en:'Gomoku Beans ✦'},subs:{zh:'连五子者胜！',en:'Five in a Row!'},sizes:[9,11,13,15],defSize:15},
+  reversi:{titles:{zh:'黑白棋豆豆 ◑',en:'Reversi Beans ◑'},subs:{zh:'可爱翻转棋',en:'Kawaii Reversi'},sizes:[8],defSize:8},
+  chess:{titles:{zh:'象棋豆豆 ♟',en:'Xiangqi Beans ♟'},subs:{zh:'中国象棋 · 红先黑后',en:'Chinese Chess · Red moves first'},sizes:[9],defSize:9},
 };
 
 // ════════════════════════════════════════════
