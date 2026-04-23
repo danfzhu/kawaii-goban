@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>豆豆棋盘 🎴</title>
+<title>Bean Board Games 🎴</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -243,7 +243,7 @@ body{
       <option value="3" selected>AI Lv3 😈</option>
       <option value="4">AI Lv4 🤖</option>
       <option value="5">AI Lv5 👿</option>
-      <option value="0">双人对战 👥</option>
+      <option value="0" data-k="twoPlayer">2 Players 👥</option>
     </select>
     <button class="help-btn" id="helpBtn">?</button>
   </div>
@@ -274,9 +274,9 @@ body{
       <span>⚪ <span id="finalW">0</span></span>
     </div>
     <div class="modal-btns">
-      <button class="modal-btn" id="mReplay">▶ 回放</button>
-      <button class="modal-btn primary" id="mAgain">✨ 再来一局</button>
-      <button class="modal-btn" id="mClose">关闭</button>
+      <button class="modal-btn" id="mReplay" data-k="replay">▶ Replay</button>
+      <button class="modal-btn primary" id="mAgain" data-k="again">✨ Play Again</button>
+      <button class="modal-btn" id="mClose" data-k="close">Close</button>
     </div>
   </div>
 </div>
@@ -286,7 +286,7 @@ body{
   <div class="tip-box">
     <h3 id="tipTitle">🎮 游戏说明</h3>
     <div id="tipBody"></div>
-    <button class="tip-close-btn" id="tipClose">好的，知道了！</button>
+    <button class="tip-close-btn" id="tipClose" data-k="tipClose">Got it!</button>
   </div>
 </div>
 
@@ -313,8 +313,8 @@ const TIPS={
   },
 };
 const TI={
-  zh:{black:'黑',white:'白',vs:'对手:',pass:'⏭ 跳过',undo:'↩ 撤棋',replay:'▶ 回放',resign:'🏳 投降','new':'✨ 新局',liberties:'数气',faces:'表情',connect:'连接',blackTurn:'黑方回合',whiteTurn:'白方回合',blackWin:'黑方胜!',whiteWin:'白方胜!',draw:'平局!',aiThink:'🤔 AI思考中...',modeGo:'围棋',modeGomoku:'五子棋',modeReversi:'黑白棋',modeChess:'象棋'},
-  en:{black:'B',white:'W',vs:'vs:',pass:'⏭ Pass',undo:'↩ Undo',replay:'▶ Replay',resign:'🏳 Resign','new':'✨ New',liberties:'Liberty',faces:'Emoji',connect:'Connect',blackTurn:"Black's turn",whiteTurn:"White's turn",blackWin:'Black wins!',whiteWin:'White wins!',draw:'Draw!',aiThink:'🤔 thinking...',modeGo:'Go',modeGomoku:'Gomoku',modeReversi:'Reversi',modeChess:'Chess'},
+  zh:{black:'黑',white:'白',tipClose:'好的，知道了！',vs:'对手:',pass:'⏭ 跳过',undo:'↩ 撤棋',replay:'▶ 回放',resign:'🏳 投降','new':'✨ 新局',liberties:'数气',faces:'表情',connect:'连接',blackTurn:'黑方回合',whiteTurn:'白方回合',blackWin:'黑方胜!',whiteWin:'白方胜!',draw:'平局!',aiThink:'🤔 AI思考中...',modeGo:'围棋',modeGomoku:'五子棋',modeReversi:'黑白棋',modeChess:'象棋',twoPlayer:'双人对战 👥',again:'✨ 再来一局',close:'关闭'},
+  en:{black:'B',white:'W',tipClose:'Got it!',vs:'vs:',pass:'⏭ Pass',undo:'↩ Undo',replay:'▶ Replay',resign:'🏳 Resign','new':'✨ New',liberties:'Liberty',faces:'Emoji',connect:'Connect',blackTurn:"Black's turn",whiteTurn:"White's turn",blackWin:'Black wins!',whiteWin:'White wins!',draw:'Draw!',aiThink:'🤔 thinking...',modeGo:'Go',modeGomoku:'Gomoku',modeReversi:'Reversi',modeChess:'Chess',twoPlayer:'2 Players 👥',again:'✨ Play Again',close:'Close'},
 };
 let lang='en';
 const t=k=>TI[lang][k]||TI.zh[k]||k;
