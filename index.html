@@ -105,19 +105,6 @@ body{
 #cvs{display:block;cursor:crosshair}
 
 /* ── Tab bar ── */
-.tab-bar{
-  display:flex;gap:5px;background:rgba(255,255,255,0.32);
-  border-radius:18px;padding:5px;box-shadow:0 2px 8px rgba(0,0,0,0.1);
-}
-.tab-btn{
-  display:flex;flex-direction:column;align-items:center;gap:2px;
-  padding:8px 26px;border-radius:13px;border:none;
-  background:transparent;cursor:pointer;font-size:12px;
-  color:#5a3e28;font-weight:700;font-family:inherit;transition:all .18s;
-}
-.tab-btn:hover{background:rgba(255,255,255,0.45)}
-.tab-btn.active{background:#4a7fd4;color:#fff;box-shadow:0 2px 8px rgba(74,127,212,.35)}
-.tab-icon{font-size:20px}
 
 /* ── Controls ── */
 .controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center}
@@ -245,10 +232,6 @@ body{
 <div class="board-wrap"><canvas id="cvs"></canvas></div>
 
 <!-- Tabs -->
-<div class="tab-bar">
-  <button class="tab-btn active" id="tabOnline"><span class="tab-icon">🌐</span><span data-k="online">联机</span></button>
-  <button class="tab-btn" id="tabShare"><span class="tab-icon">🐾</span><span data-k="share">分享</span></button>
-</div>
 
 <!-- Controls -->
 <div class="controls">
@@ -330,8 +313,8 @@ const TIPS={
   },
 };
 const TI={
-  zh:{black:'黑',white:'白',online:'联机',share:'分享',vs:'对手:',pass:'⏭ 跳过',undo:'↩ 撤棋',replay:'▶ 回放',resign:'🏳 投降','new':'✨ 新局',liberties:'数气',faces:'表情',connect:'连接',blackTurn:'黑方回合',whiteTurn:'白方回合',blackWin:'黑方胜!',whiteWin:'白方胜!',draw:'平局!',aiThink:'🤔 AI思考中...',modeGo:'围棋',modeGomoku:'五子棋',modeReversi:'黑白棋',modeChess:'象棋'},
-  en:{black:'B',white:'W',online:'Online',share:'Share',vs:'vs:',pass:'⏭ Pass',undo:'↩ Undo',replay:'▶ Replay',resign:'🏳 Resign','new':'✨ New',liberties:'Liberty',faces:'Emoji',connect:'Connect',blackTurn:"Black's turn",whiteTurn:"White's turn",blackWin:'Black wins!',whiteWin:'White wins!',draw:'Draw!',aiThink:'🤔 thinking...',modeGo:'Go',modeGomoku:'Gomoku',modeReversi:'Reversi',modeChess:'Chess'},
+  zh:{black:'黑',white:'白',vs:'对手:',pass:'⏭ 跳过',undo:'↩ 撤棋',replay:'▶ 回放',resign:'🏳 投降','new':'✨ 新局',liberties:'数气',faces:'表情',connect:'连接',blackTurn:'黑方回合',whiteTurn:'白方回合',blackWin:'黑方胜!',whiteWin:'白方胜!',draw:'平局!',aiThink:'🤔 AI思考中...',modeGo:'围棋',modeGomoku:'五子棋',modeReversi:'黑白棋',modeChess:'象棋'},
+  en:{black:'B',white:'W',vs:'vs:',pass:'⏭ Pass',undo:'↩ Undo',replay:'▶ Replay',resign:'🏳 Resign','new':'✨ New',liberties:'Liberty',faces:'Emoji',connect:'Connect',blackTurn:"Black's turn",whiteTurn:"White's turn",blackWin:'Black wins!',whiteWin:'White wins!',draw:'Draw!',aiThink:'🤔 thinking...',modeGo:'Go',modeGomoku:'Gomoku',modeReversi:'Reversi',modeChess:'Chess'},
 };
 let lang='en';
 const t=k=>TI[lang][k]||TI.zh[k]||k;
@@ -1823,13 +1806,6 @@ document.getElementById('mReplay').addEventListener('click',()=>{
 document.getElementById('mAgain').addEventListener('click',()=>startNew());
 document.getElementById('mClose').addEventListener('click',()=>document.getElementById('gameOverModal').classList.add('hidden'));
 
-document.getElementById('tabOnline').addEventListener('click',()=>{
-  document.getElementById('tabOnline').classList.add('active');document.getElementById('tabShare').classList.remove('active');
-});
-document.getElementById('tabShare').addEventListener('click',()=>{
-  document.getElementById('tabShare').classList.add('active');document.getElementById('tabOnline').classList.remove('active');
-  navigator.clipboard&&navigator.clipboard.writeText(location.href).then(()=>alert(lang==='zh'?'🔗 链接已复制！':'🔗 Link copied!'));
-});
 
 document.getElementById('helpBtn').addEventListener('click',()=>{
   const tip=TIPS[gameMode]||TIPS.go;
