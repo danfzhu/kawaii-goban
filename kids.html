@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bean Kids Games 🎮</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:#7fb5d4;
+  background-image:radial-gradient(circle,rgba(255,255,255,0.15) 1.5px,transparent 1.5px);
+  background-size:22px 22px;
+  font-family:'Nunito','PingFang SC','Microsoft YaHei',sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  padding:12px 8px 28px;gap:9px;user-select:none;
+}
+
+/* ── Mode Bar ── */
+.mode-bar{
+  display:flex;gap:4px;flex-wrap:wrap;justify-content:center;
+  background:rgba(255,255,255,0.38);
+  padding:5px;border-radius:30px;
+  box-shadow:0 3px 14px rgba(0,0,0,0.13);
+}
+.mode-btn{
+  padding:8px 18px;border-radius:24px;border:none;
+  background:transparent;cursor:pointer;
+  font-size:14px;font-weight:800;font-family:inherit;
+  color:#2a4a6a;transition:all .2s;white-space:nowrap;
+}
+.mode-btn:hover{background:rgba(255,255,255,0.5)}
+.mode-btn.active{
+  background:linear-gradient(135deg,#1a3a5c,#2e6da4);
+  color:#fff;box-shadow:0 2px 10px rgba(20,50,100,.32);
+}
+
+/* ── Header ── */
+.header{display:flex;align-items:center;gap:12px}
+.header-group{display:flex;flex-direction:column;align-items:flex-start}
+.title{
+  font-size:22px;font-weight:900;
+  background:linear-gradient(135deg,#1a3a5c,#2e6da4);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.title-sub{font-size:11px;color:rgba(20,50,100,.5);font-weight:600;margin-top:-1px}
+.header-btns{display:flex;gap:7px}
+.header-btn{
+  padding:5px 13px;border-radius:20px;
+  border:2px solid rgba(255,255,255,0.7);
+  background:rgba(255,255,255,0.55);
+  cursor:pointer;font-size:13px;color:#2a4a6a;
+  font-weight:700;font-family:inherit;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);transition:all .15s;
+}
+.header-btn:hover{background:rgba(255,255,255,0.8);transform:translateY(-1px)}
+
+/* ── Score / info bar ── */
+.score-bar{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;
+  background:rgba(255,255,255,0.92);
+  padding:10px 22px;border-radius:36px;
+  box-shadow:0 3px 14px rgba(0,0,0,0.13);
+}
+.score-item{display:flex;align-items:center;gap:8px}
+.score-lbl{color:#6a90b0;font-size:13px;font-weight:700}
+.score-val{font-size:26px;font-weight:900;color:#1a3a5c;min-width:36px;text-align:center;line-height:1}
+.turn-pill{
+  padding:5px 14px;border-radius:20px;
+  border:2.5px solid #c0d8ee;background:#f0f8ff;
+  font-size:13px;color:#2a5a8a;font-weight:700;cursor:default;white-space:nowrap;transition:all .2s;
+}
+.turn-pill.ai-turn{border-color:#f4a94e;background:#fff8ee;color:#c07020;animation:pulse .8s ease-in-out infinite alternate}
+@keyframes pulse{from{opacity:.7}to{opacity:1}}
+
+/* ── Board wrap ── */
+.board-wrap{
+  border-radius:18px;overflow:hidden;
+  box-shadow:0 8px 32px rgba(0,0,0,0.28),0 2px 6px rgba(0,0,0,0.12);
+  border:3px solid rgba(255,255,255,0.3);
+}
+#cvs{display:block;cursor:pointer}
+
+/* ── 2048 grid ── */
+#grid2048{
+  display:none;
+  background:#b8d4e8;
+  border-radius:18px;
+  padding:10px;
+  gap:8px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.28);
+}
+.tile-row{display:flex;gap:8px}
+.tile{
+  width:90px;height:90px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;font-weight:900;font-family:inherit;
+  transition:all .1s;
+  background:#cce0f0;color:transparent;
+}
+.tile.v2{background:#fff9e6;color:#776e65;font-size:32px}
+.tile.v4{background:#fff0c8;color:#776e65;font-size:32px}
+.tile.v8{background:#ffb86b;color:#fff;font-size:32px}
+.tile.v16{background:#ff9a4a;color:#fff;font-size:28px}
+.tile.v32{background:#ff7b54;color:#fff;font-size:28px}
+.tile.v64{background:#f45c30;color:#fff;font-size:28px}
+.tile.v128{background:#edcf72;color:#fff;font-size:24px}
+.tile.v256{background:#edcc61;color:#fff;font-size:24px}
+.tile.v512{background:#edc850;color:#fff;font-size:24px}
+.tile.v1024{background:#edc53f;color:#fff;font-size:20px}
+.tile.v2048{background:#edc22e;color:#fff;font-size:20px;animation:glow .6s ease infinite alternate}
+@keyframes glow{from{box-shadow:0 0 10px #f4d03f}to{box-shadow:0 0 28px #f4d03f,0 0 6px #fff}}
+.tile .tile-face{font-size:22px;margin-bottom:2px}
+
+/* ── Memory grid ── */
+#memGrid{
+  display:none;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:center;
+  max-width:520px;
+}
+.mem-card{
+  width:80px;height:80px;border-radius:14px;
+  cursor:pointer;position:relative;
+  transition:transform .35s;transform-style:preserve-3d;
+}
+.mem-card.flipped{transform:rotateY(180deg)}
+.mem-card.matched{transform:rotateY(180deg);opacity:.7;cursor:default}
+.card-front,.card-back{
+  position:absolute;inset:0;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:36px;backface-visibility:hidden;
+}
+.card-front{background:linear-gradient(135deg,#2e6da4,#5ba0d8);box-shadow:0 4px 12px rgba(0,0,0,0.2)}
+.card-back{background:#fff;box-shadow:0 4px 12px rgba(0,0,0,0.15);transform:rotateY(180deg)}
+
+/* ── Controls ── */
+.controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center}
+.opp-ctrl{display:flex;align-items:center;gap:8px;font-size:14px;color:#1a3a5c;font-weight:700}
+.ai-select{
+  padding:7px 12px;border-radius:20px;
+  border:2px solid rgba(255,255,255,0.7);background:rgba(255,255,255,0.75);
+  font-size:13px;cursor:pointer;font-family:inherit;color:#1a3a5c;font-weight:700;
+  box-shadow:0 2px 6px rgba(0,0,0,0.08);
+}
+.ctrl-row{display:flex;gap:7px;flex-wrap:wrap;justify-content:center}
+.ctrl-btn{
+  padding:8px 17px;border-radius:22px;
+  border:2px solid rgba(255,255,255,0.7);background:rgba(255,255,255,0.75);
+  cursor:pointer;font-size:13px;color:#1a3a5c;font-weight:700;font-family:inherit;
+  box-shadow:0 2px 6px rgba(0,0,0,0.09);transition:all .15s;
+}
+.ctrl-btn:hover:not(:disabled){background:rgba(255,255,255,0.95);transform:translateY(-1px);box-shadow:0 4px 10px rgba(0,0,0,0.13)}
+.ctrl-btn:disabled{opacity:.35;cursor:not-allowed}
+.ctrl-btn.primary{
+  background:linear-gradient(135deg,#1a3a5c,#2e6da4);color:#fff;border-color:transparent;
+  box-shadow:0 3px 10px rgba(20,60,100,.35);
+}
+.ctrl-btn.primary:hover:not(:disabled){background:linear-gradient(135deg,#2a5a8c,#3e8ac4);transform:translateY(-1px)}
+
+/* ── Modal ── */
+.overlay{position:fixed;inset:0;background:rgba(20,50,100,.28);display:flex;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(3px)}
+.overlay.hidden{display:none}
+.modal{background:#fff;border-radius:28px;padding:34px 40px;text-align:center;box-shadow:0 12px 56px rgba(0,0,0,.28);min-width:290px}
+.modal-emoji{font-size:56px;margin-bottom:8px;animation:bounce .5s ease infinite alternate}
+@keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-8px)}}
+.modal-title{font-size:24px;font-weight:900;color:#2e8a50;margin-bottom:6px}
+.modal-title.lose{color:#c03030}
+.modal-title.draw{color:#6a6a6a}
+.modal-sub{font-size:14px;color:#8aaa70;font-weight:700;margin-bottom:22px}
+.modal-btns{display:flex;gap:10px;justify-content:center}
+.modal-btn{padding:11px 22px;border-radius:22px;border:2px solid #d0e4f8;background:#fff;cursor:pointer;font-size:15px;font-family:inherit;font-weight:700;color:#1a3a5c;transition:all .15s}
+.modal-btn:hover{background:#e8f4ff;transform:translateY(-1px)}
+.modal-btn.primary{background:linear-gradient(135deg,#1a3a5c,#2e6da4);color:#fff;border-color:transparent;box-shadow:0 3px 12px rgba(20,60,100,.3)}
+.modal-btn.primary:hover{background:linear-gradient(135deg,#2a5a8c,#3e8ac4)}
+
+/* ── How-to tip ── */
+.tip-overlay{position:fixed;inset:0;background:rgba(20,50,100,.25);display:flex;align-items:center;justify-content:center;z-index:300;backdrop-filter:blur(3px)}
+.tip-overlay.hidden{display:none}
+.tip-box{background:#fff;border-radius:22px;padding:24px 28px;max-width:320px;text-align:left;line-height:1.75;font-size:14px;color:#1a3a5c;font-family:inherit;font-weight:600;box-shadow:0 10px 44px rgba(0,0,0,.2)}
+.tip-box h3{margin-bottom:10px;font-size:17px;color:#1a3a5c;font-weight:900}
+.tip-close-btn{display:block;margin-top:14px;padding:10px;text-align:center;background:linear-gradient(135deg,#1a3a5c,#2e6da4);color:#fff;border-radius:16px;border:none;cursor:pointer;width:100%;font-size:14px;font-family:inherit;font-weight:700}
+
+/* ── Nav link ── */
+.nav-link{
+  font-size:12px;color:rgba(255,255,255,0.8);font-weight:700;
+  text-decoration:none;padding:4px 12px;border-radius:14px;
+  background:rgba(255,255,255,0.18);transition:all .15s;
+}
+.nav-link:hover{background:rgba(255,255,255,0.32)}
+
+/* ── Diff selector ── */
+.diff-bar{
+  display:flex;gap:4px;
+  background:rgba(255,255,255,0.35);
+  padding:4px;border-radius:24px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.1);
+}
+.diff-btn{
+  padding:5px 12px;border-radius:20px;border:none;
+  background:transparent;cursor:pointer;
+  font-size:12px;color:#2a4a6a;font-weight:700;font-family:inherit;transition:all .18s;
+}
+.diff-btn:hover{background:rgba(255,255,255,0.5)}
+.diff-btn.active{background:#2e6da4;color:#fff;box-shadow:0 2px 8px rgba(30,80,160,.32)}
+</style>
+</head>
+<body>
+
+<!-- Mode Bar -->
+<div class="mode-bar">
+  <button class="mode-btn active" data-mode="ttt">❌ <span data-k="modeTtt">Tic-Tac-Toe</span></button>
+  <button class="mode-btn" data-mode="c4">🟡 <span data-k="modeC4">Connect 4</span></button>
+  <button class="mode-btn" data-mode="g2048">🔢 <span data-k="mode2048">2048</span></button>
+  <button class="mode-btn" data-mode="mem">🃏 <span data-k="modeMem">Memory</span></button>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-group">
+    <h1 class="title" id="mainTitle">Bean Kids 🎮</h1>
+    <div class="title-sub" id="mainSub">Fun kawaii games for everyone!</div>
+  </div>
+  <div class="header-btns">
+    <button class="header-btn" id="langBtn" onclick="toggleLang()">中</button>
+    <button class="header-btn" onclick="showTip()">?</button>
+    <a class="nav-link" href="index.html">🎴 Board Games</a>
+  </div>
+</div>
+
+<!-- Score Bar -->
+<div class="score-bar" id="scoreBar">
+  <div class="score-item" id="p1ScoreItem">
+    <div class="score-lbl" id="p1Lbl">❌ You</div>
+    <div class="score-val" id="p1Score">0</div>
+  </div>
+  <div class="score-item" id="p2ScoreItem">
+    <div class="score-lbl" id="p2Lbl">⭕ AI</div>
+    <div class="score-val" id="p2Score">0</div>
+  </div>
+  <div class="turn-pill" id="turnPill">Your turn ❌</div>
+</div>
+
+<!-- Canvas board (Tic-tac-toe & Connect 4) -->
+<div class="board-wrap" id="boardWrap">
+  <canvas id="cvs"></canvas>
+</div>
+
+<!-- 2048 Grid -->
+<div id="grid2048" style="display:none"></div>
+
+<!-- Memory Grid -->
+<div id="memGrid" style="display:none;flex-direction:column;align-items:center;gap:10px">
+  <div id="memCardArea" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:520px"></div>
+</div>
+
+<!-- Controls -->
+<div class="controls">
+  <div class="opp-ctrl" id="oppCtrl">
+    <span data-k="vs">VS</span>
+    <select class="ai-select" id="oppSel" onchange="changeOpp()">
+      <option value="human" data-k-opt="twoPlayer">2 Players 👥</option>
+      <option value="1">AI Lv1 😊</option>
+      <option value="2">AI Lv2 🙂</option>
+      <option value="3" selected>AI Lv3 😈</option>
+      <option value="4">AI Lv4 🤖</option>
+    </select>
+  </div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn primary" id="newGameBtn" onclick="newGame()">✨ <span data-k="newGame">New Game</span></button>
+    <button class="ctrl-btn" id="undoBtn" onclick="doUndo()">↩ <span data-k="undo">Undo</span></button>
+  </div>
+</div>
+
+<!-- Win Modal -->
+<div class="overlay hidden" id="winOverlay">
+  <div class="modal">
+    <div class="modal-emoji" id="winEmoji">🎉</div>
+    <div class="modal-title" id="winTitle">You Win!</div>
+    <div class="modal-sub" id="winSub"></div>
+    <div class="modal-btns">
+      <button class="modal-btn primary" onclick="newGame();closeModal()">✨ <span data-k="again">Play Again</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- Tip overlay -->
+<div class="tip-overlay hidden" id="tipOverlay">
+  <div class="tip-box">
+    <h3 id="tipTitle">How to Play</h3>
+    <div id="tipBody"></div>
+    <button class="tip-close-btn" onclick="closeTip()"><span data-k="tipClose">Got it!</span></button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── Translation ──────────────────────────────────────────────────────────────
+const TI={
+  en:{
+    modeTtt:'Tic-Tac-Toe', modeC4:'Connect 4', mode2048:'2048', modeMem:'Memory',
+    vs:'VS', twoPlayer:'2 Players 👥', newGame:'New Game', undo:'Undo', again:'Play Again',
+    tipClose:'Got it!',
+    yourTurn:'Your turn', aiTurn:'AI thinking…', p1Turn:'Player 1', p2Turn:'Player 2',
+    youWin:'You Win! 🎉', aiWin:'AI Wins! 🤖', p1Win:'Player 1 Wins! 🎉', p2Win:'Player 2 Wins! 🎉',
+    draw:'It\'s a Draw! 🤝', gameOver:'Game Over',
+    score:'Score', best:'Best', moves:'Moves', pairs:'Pairs',
+    tipTtt:'<b>Tic-Tac-Toe:</b> Get 3 in a row — horizontally, vertically, or diagonally. You are ❌, AI is ⭕.',
+    tipC4:'<b>Connect 4:</b> Drop pieces into columns. First to connect 4 in a row wins! You are 🔴, AI/P2 is 🟡.',
+    tip2048:'<b>2048:</b> Swipe or use arrow keys to slide tiles. Same numbers merge! Reach 2048 to win.',
+    tipMem:'<b>Memory:</b> Flip cards to find matching pairs. Remember where each emoji hides!',
+  },
+  zh:{
+    modeTtt:'井字棋', modeC4:'四子棋', mode2048:'2048', modeMem:'翻牌配对',
+    vs:'对战', twoPlayer:'双人对战 👥', newGame:'新游戏', undo:'悔棋', again:'再来一局',
+    tipClose:'好的！',
+    yourTurn:'你的回合', aiTurn:'AI思考中…', p1Turn:'玩家1', p2Turn:'玩家2',
+    youWin:'你赢了！🎉', aiWin:'AI赢了！🤖', p1Win:'玩家1赢！🎉', p2Win:'玩家2赢！🎉',
+    draw:'平局！🤝', gameOver:'游戏结束',
+    score:'分数', best:'最高分', moves:'步数', pairs:'对数',
+    tipTtt:'<b>井字棋：</b>先在横、竖或斜方向连成3子获胜。你是❌，AI是⭕。',
+    tipC4:'<b>四子棋：</b>向列中放棋子，先连成4子获胜！你是🔴，AI/P2是🟡。',
+    tip2048:'<b>2048：</b>用方向键或滑动移动方块，相同数字合并！达到2048即胜。',
+    tipMem:'<b>翻牌配对：</b>翻开卡片找出相同的一对。记住每个表情藏在哪里！',
+  }
+};
+let lang='en';
+const t=k=>TI[lang][k]||TI.en[k]||k;
+
+function toggleLang(){
+  lang=lang==='en'?'zh':'en';
+  document.getElementById('langBtn').textContent=lang==='en'?'中':'EN';
+  applyLang();
+}
+function applyLang(){
+  document.querySelectorAll('[data-k]').forEach(el=>el.textContent=t(el.getAttribute('data-k')));
+  updateTurnDisplay();
+  // refresh opp select option text
+  const sel=document.getElementById('oppSel');
+  sel.options[0].text=t('twoPlayer');
+}
+
+// ── State ────────────────────────────────────────────────────────────────────
+let mode='ttt';
+let G={};
+let aiLevel=3;
+let vsAI=true;
+let scores={ttt:[0,0],c4:[0,0],mem:[0,0]};
+let aiTimer=null;
+
+const cvs=document.getElementById('cvs');
+const ctx=cvs.getContext('2d');
+
+// ── Mode switching ────────────────────────────────────────────────────────────
+document.querySelectorAll('.mode-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    mode=btn.dataset.mode;
+    document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active',b===btn));
+    scores={ttt:[0,0],c4:[0,0],mem:[0,0]};
+    updateScoreBar();
+    setupMode();
+    newGame();
+  });
+});
+
+function setupMode(){
+  const bw=document.getElementById('boardWrap');
+  const g2=document.getElementById('grid2048');
+  const mg=document.getElementById('memGrid');
+  const oc=document.getElementById('oppCtrl');
+  const ub=document.getElementById('undoBtn');
+  const sub=document.getElementById('mainSub');
+
+  bw.style.display='none'; g2.style.display='none'; mg.style.display='none';
+  oc.style.display='flex'; ub.style.display='';
+
+  if(mode==='ttt'){
+    bw.style.display='';
+    sub.textContent=lang==='en'?'3 in a row wins!':'连3子获胜！';
+  } else if(mode==='c4'){
+    bw.style.display='';
+    sub.textContent=lang==='en'?'Connect 4 to win!':'连4子获胜！';
+  } else if(mode==='g2048'){
+    g2.style.display='grid';
+    oc.style.display='none'; ub.style.display='none';
+    sub.textContent=lang==='en'?'Reach the 2048 tile!':'合并到2048！';
+    updateScoreBar2048();
+  } else if(mode==='mem'){
+    mg.style.display='flex';
+    oc.style.display='none'; ub.style.display='none';
+    sub.textContent=lang==='en'?'Find all matching pairs!':'找出所有配对！';
+  }
+  document.getElementById('mainTitle').textContent=
+    mode==='ttt'?'Tic-Tac-Toe 🎮':
+    mode==='c4'?'Connect 4 🟡':
+    mode==='g2048'?'2048 🔢':'Memory Match 🃏';
+}
+
+function changeOpp(){
+  const v=document.getElementById('oppSel').value;
+  vsAI=(v!=='human');
+  aiLevel=vsAI?parseInt(v):3;
+  newGame();
+}
+
+// ── Score bar ─────────────────────────────────────────────────────────────────
+function updateScoreBar(){
+  const sb=document.getElementById('scoreBar');
+  const g2=mode==='g2048', mem=mode==='mem';
+  sb.innerHTML='';
+  if(g2){
+    sb.innerHTML=`
+      <div class="score-item"><div class="score-lbl" id="lbl2048">${t('score')}</div><div class="score-val" id="val2048">0</div></div>
+      <div class="score-item"><div class="score-lbl">${t('best')}</div><div class="score-val" id="best2048">${G.best||0}</div></div>
+      <div class="turn-pill" id="turnPill">2048</div>`;
+  } else if(mem){
+    sb.innerHTML=`
+      <div class="score-item"><div class="score-lbl">${t('pairs')}</div><div class="score-val" id="memPairs">0</div></div>
+      <div class="score-item"><div class="score-lbl">${t('moves')}</div><div class="score-val" id="memMoves">0</div></div>
+      <div class="turn-pill" id="turnPill">🃏</div>`;
+  } else {
+    const p1=mode==='ttt'?'❌':'🔴';
+    const p2=mode==='ttt'?'⭕':'🟡';
+    const sc=scores[mode];
+    sb.innerHTML=`
+      <div class="score-item"><div class="score-lbl">${p1} ${vsAI?t('yourTurn').split(' ')[0]:'P1'}</div><div class="score-val" id="p1Score">${sc[0]}</div></div>
+      <div class="score-item"><div class="score-lbl">${p2} ${vsAI?'AI':'P2'}</div><div class="score-val" id="p2Score">${sc[1]}</div></div>
+      <div class="turn-pill" id="turnPill">…</div>`;
+  }
+}
+
+function updateScoreBar2048(){
+  const v=document.getElementById('val2048');
+  const b=document.getElementById('best2048');
+  if(v)v.textContent=G.score||0;
+  if(b)b.textContent=G.best||0;
+}
+
+function updateTurnDisplay(){
+  const pill=document.getElementById('turnPill');
+  if(!pill)return;
+  if(mode==='g2048'||mode==='mem')return;
+  if(G.over){pill.textContent=t('gameOver');pill.className='turn-pill';return;}
+  const isP1=G.turn===0;
+  const myTurn=vsAI&&isP1||!vsAI;
+  if(vsAI){
+    if(isP1){pill.textContent=t('yourTurn')+' ❌';pill.className='turn-pill';}
+    else{pill.textContent=t('aiTurn');pill.className='turn-pill ai-turn';}
+  } else {
+    pill.textContent=(isP1?t('p1Turn')+' '+(mode==='ttt'?'❌':'🔴'):t('p2Turn')+' '+(mode==='ttt'?'⭕':'🟡'));
+    pill.className='turn-pill';
+  }
+}
+
+// ── New Game ───────────────────────────────────────────────────────────────────
+function newGame(){
+  if(aiTimer){clearTimeout(aiTimer);aiTimer=null;}
+  closeModal();
+  updateScoreBar();
+  if(mode==='ttt') initTtt();
+  else if(mode==='c4') initC4();
+  else if(mode==='g2048') init2048();
+  else if(mode==='mem') initMem();
+}
+
+function closeModal(){document.getElementById('winOverlay').classList.add('hidden');}
+
+function showWin(emoji,titleKey,cls,sub=''){
+  document.getElementById('winEmoji').textContent=emoji;
+  const tt=document.getElementById('winTitle');
+  tt.textContent=t(titleKey);
+  tt.className='modal-title'+(cls?' '+cls:'');
+  document.getElementById('winSub').textContent=sub;
+  document.getElementById('winOverlay').classList.remove('hidden');
+}
+
+// ── Tic-Tac-Toe ──────────────────────────────────────────────────────────────
+const TTT_SIZE=3;
+const TTT_PX=360;
+const TTT_CELL=TTT_PX/TTT_SIZE;
+
+function initTtt(){
+  G={board:Array(9).fill(0),turn:0,over:false,history:[]};
+  cvs.width=TTT_PX; cvs.height=TTT_PX;
+  cvs.style.cursor='pointer';
+  cvs.onclick=tttClick;
+  document.onkeydown=null;
+  renderTtt();
+  updateTurnDisplay();
+}
+
+function renderTtt(){
+  const C=TTT_CELL;
+  ctx.clearRect(0,0,TTT_PX,TTT_PX);
+  // background
+  ctx.fillStyle='#e8f4fd';
+  ctx.fillRect(0,0,TTT_PX,TTT_PX);
+  // grid lines
+  ctx.strokeStyle='#a0c4e0'; ctx.lineWidth=5; ctx.lineCap='round';
+  for(let i=1;i<3;i++){
+    ctx.beginPath();ctx.moveTo(i*C,16);ctx.lineTo(i*C,TTT_PX-16);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(16,i*C);ctx.lineTo(TTT_PX-16,i*C);ctx.stroke();
+  }
+  // win line
+  if(G.winLine){
+    const [a,b,c]=G.winLine;
+    const ax=(a%3)*C+C/2, ay=Math.floor(a/3)*C+C/2;
+    const bx=(b%3)*C+C/2, by=Math.floor(b/3)*C+C/2;
+    const cx2=(c%3)*C+C/2, cy2=Math.floor(c/3)*C+C/2;
+    ctx.strokeStyle='rgba(255,120,60,0.7)'; ctx.lineWidth=14;
+    ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(cx2,cy2);ctx.stroke();
+  }
+  // pieces
+  for(let i=0;i<9;i++){
+    const r=Math.floor(i/3),c=i%3;
+    const x=c*C+C/2, y=r*C+C/2;
+    if(G.board[i]===1) drawTttX(x,y,C*.32);
+    else if(G.board[i]===-1) drawTttO(x,y,C*.3);
+  }
+}
+
+function drawTttX(x,y,r){
+  // Draw kawaii ❌ face
+  drawKawaiiFace(x,y,r,'x',false);
+}
+function drawTttO(x,y,r){
+  drawKawaiiFace(x,y,r,'o',false);
+}
+
+function tttClick(e){
+  if(G.over) return;
+  if(vsAI&&G.turn===1) return;
+  const rect=cvs.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const C=TTT_CELL;
+  const col=Math.floor(mx/C), row=Math.floor(my/C);
+  tttPlace(row*3+col);
+}
+
+function tttPlace(idx){
+  if(G.board[idx]!==0||G.over) return;
+  G.history.push(idx);
+  G.board[idx]=G.turn===0?1:-1;
+  const win=checkTttWin(G.board);
+  if(win){
+    G.over=true; G.winLine=win;
+    renderTtt();
+    const p1won=G.turn===0;
+    scores[mode][p1won?0:1]++;
+    setTimeout(()=>{
+      if(vsAI) showWin(p1won?'🎉':'🤖',p1won?'youWin':'aiWin',p1won?'':'lose');
+      else showWin('🎉',p1won?'p1Win':'p2Win','');
+    },400);
+    return;
+  }
+  if(G.board.every(v=>v!==0)){
+    G.over=true; renderTtt();
+    setTimeout(()=>showWin('🤝','draw','draw'),400);
+    return;
+  }
+  G.turn=1-G.turn;
+  renderTtt(); updateTurnDisplay();
+  if(vsAI&&G.turn===1) aiTimer=setTimeout(tttAIMove,420);
+}
+
+function checkTttWin(b){
+  const lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  for(const l of lines) if(b[l[0]]&&b[l[0]]===b[l[1]]&&b[l[1]]===b[l[2]]) return l;
+  return null;
+}
+
+function tttAIMove(){
+  // minimax always perfect
+  const mv=tttMinimax(G.board,-1,true,-Infinity,Infinity);
+  if(mv.idx>=0) tttPlace(mv.idx);
+}
+
+function tttMinimax(board,player,isMax,alpha,beta){
+  const win=checkTttWin(board);
+  if(win) return{score:board[win[0]]===1?-10:10, idx:-1};
+  const empty=board.map((v,i)=>v===0?i:-1).filter(v=>v>=0);
+  if(!empty.length) return{score:0,idx:-1};
+  let best={score:isMax?-Infinity:Infinity,idx:-1};
+  for(const i of empty){
+    const nb=[...board]; nb[i]=player;
+    const res=tttMinimax(nb,-player,!isMax,alpha,beta);
+    if(isMax){if(res.score>best.score){best={score:res.score,idx:i};alpha=Math.max(alpha,res.score)}}
+    else{if(res.score<best.score){best={score:res.score,idx:i};beta=Math.min(beta,res.score)}}
+    if(beta<=alpha) break;
+  }
+  return best;
+}
+
+function doUndo(){
+  if(mode==='ttt') tttUndo();
+  else if(mode==='c4') c4Undo();
+}
+
+function tttUndo(){
+  if(!G.history||G.history.length===0) return;
+  if(vsAI&&G.history.length>=2){G.board[G.history.pop()]=0;G.board[G.history.pop()]=0;G.turn=0;}
+  else if(!vsAI&&G.history.length>=1){const last=G.history.pop();G.board[last]=0;G.turn=1-G.turn;}
+  G.over=false; G.winLine=null;
+  renderTtt(); updateTurnDisplay();
+}
+
+// ── Kawaii Face Renderer ───────────────────────────────────────────────────────
+function drawKawaiiFace(x,y,r,type,scared){
+  ctx.save();
+  // body circle
+  let fill, stroke;
+  if(type==='x'){fill='#ff7b8a';stroke='#e05060';}
+  else if(type==='o'){fill='#7bbfff';stroke='#4a90d0';}
+  else if(type==='r'){fill='#ff9060';stroke='#e06030';}   // red (Connect4 P1)
+  else{fill='#ffd060';stroke='#e0a020';}                  // yellow (Connect4 P2)
+
+  ctx.fillStyle=fill;
+  ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle=stroke;ctx.lineWidth=r*.1;ctx.stroke();
+
+  // eyes
+  const ey=y-r*.12;
+  const ex1=x-r*.28, ex2=x+r*.28;
+  const eyeR=r*.13;
+  ctx.fillStyle='#333';
+  if(scared){
+    // wide scared eyes
+    ctx.beginPath();ctx.arc(ex1,ey,eyeR*1.5,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(ex2,ey,eyeR*1.5,0,Math.PI*2);ctx.fill();
+    // sweat drop
+    ctx.fillStyle='rgba(100,160,255,0.7)';
+    ctx.beginPath();ctx.arc(x+r*.58,y-r*.48,r*.07,0,Math.PI*2);ctx.fill();
+  } else {
+    // normal crescent eyes
+    ctx.beginPath();ctx.arc(ex1,ey,eyeR,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(ex2,ey,eyeR,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=fill;
+    ctx.beginPath();ctx.arc(ex1,ey-eyeR*.35,eyeR*.75,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(ex2,ey-eyeR*.35,eyeR*.75,0,Math.PI*2);ctx.fill();
+  }
+
+  // cheeks
+  ctx.fillStyle='rgba(255,120,120,0.32)';
+  ctx.beginPath();ctx.arc(x-r*.46,y+r*.08,r*.16,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(x+r*.46,y+r*.08,r*.16,0,Math.PI*2);ctx.fill();
+
+  // mouth
+  const my=y+r*.28;
+  ctx.strokeStyle='#333'; ctx.lineWidth=r*.09; ctx.lineCap='round';
+  if(scared){
+    // wavy scared mouth
+    ctx.beginPath();ctx.arc(x,my,r*.2,Math.PI+.2,Math.PI*2-.2);ctx.stroke();
+  } else {
+    ctx.beginPath();ctx.arc(x,my,r*.22,0,Math.PI);ctx.stroke();
+  }
+
+  // symbol on face
+  ctx.fillStyle='rgba(255,255,255,0.7)';
+  ctx.font=`bold ${r*.48}px Nunito,sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  const sym=type==='x'?'✕':type==='o'?'○':type==='r'?'●':'●';
+  ctx.fillText(sym,x,y+r*.52);
+
+  ctx.restore();
+}
+
+// ── Connect 4 ────────────────────────────────────────────────────────────────
+const C4_COLS=7, C4_ROWS=6;
+let C4_CELL;
+
+function initC4(){
+  C4_CELL=Math.min(Math.floor((window.innerWidth-32)/C4_COLS), 72);
+  const W=C4_CELL*C4_COLS, H=C4_CELL*(C4_ROWS+1);
+  cvs.width=W; cvs.height=H;
+  cvs.style.cursor='pointer';
+  cvs.onclick=c4Click;
+  cvs.onmousemove=c4Hover;
+  document.onkeydown=null;
+  G={board:Array.from({length:C4_ROWS},()=>Array(C4_COLS).fill(0)),turn:0,over:false,history:[],hover:-1,winCells:null};
+  renderC4();
+  updateTurnDisplay();
+}
+
+function renderC4(){
+  const W=cvs.width, H=cvs.height;
+  const C=C4_CELL;
+  ctx.clearRect(0,0,W,H);
+
+  // top row: column indicator
+  ctx.fillStyle='#1a5080';
+  ctx.fillRect(0,0,W,C);
+  if(G.hover>=0&&!G.over){
+    const hx=G.hover*C+C/2;
+    const col=G.turn===0?'#ff7b8a':'#ffd060';
+    ctx.fillStyle=col;
+    ctx.beginPath();ctx.arc(hx,C/2,C*.36,0,Math.PI*2);ctx.fill();
+    // cute face on hover piece
+    drawKawaiiFace(hx,C/2,C*.34,G.turn===0?'r':'y',false);
+  }
+
+  // board background
+  ctx.fillStyle='#1a5080';
+  ctx.fillRect(0,C,W,H-C);
+
+  // holes
+  for(let r=0;r<C4_ROWS;r++){
+    for(let c=0;c<C4_COLS;c++){
+      const x=c*C+C/2, y=(r+1)*C+C/2;
+      const v=G.board[r][c];
+      if(v===0){
+        ctx.fillStyle='#0d3055';
+        ctx.beginPath();ctx.arc(x,y,C*.4,0,Math.PI*2);ctx.fill();
+      } else {
+        const isWin=G.winCells&&G.winCells.some(([wr,wc])=>wr===r&&wc===c);
+        const type=v===1?'r':'y';
+        const scared=false;
+        drawKawaiiFace(x,y,C*.4,type,scared);
+        if(isWin){
+          ctx.save();
+          ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=4;
+          ctx.beginPath();ctx.arc(x,y,C*.42,0,Math.PI*2);ctx.stroke();
+          ctx.restore();
+        }
+      }
+    }
+  }
+}
+
+function c4Hover(e){
+  if(G.over) return;
+  const rect=cvs.getBoundingClientRect();
+  const mx=e.clientX-rect.left;
+  G.hover=Math.min(Math.floor(mx/C4_CELL),C4_COLS-1);
+  renderC4();
+}
+
+function c4Click(e){
+  if(G.over) return;
+  if(vsAI&&G.turn===1) return;
+  const rect=cvs.getBoundingClientRect();
+  const mx=e.clientX-rect.left;
+  c4Drop(Math.floor(mx/C4_CELL));
+}
+
+function c4Drop(col){
+  if(col<0||col>=C4_COLS||G.over) return;
+  // find bottom empty row
+  let row=-1;
+  for(let r=C4_ROWS-1;r>=0;r--){if(G.board[r][col]===0){row=r;break;}}
+  if(row<0) return;
+  G.history.push(col);
+  G.board[row][col]=G.turn===0?1:-1;
+  const win=checkC4Win(G.board);
+  renderC4();
+  if(win){
+    G.over=true; G.winCells=win;
+    renderC4();
+    const p1won=G.turn===0;
+    scores['c4'][p1won?0:1]++;
+    setTimeout(()=>{
+      if(vsAI) showWin(p1won?'🎉':'🤖',p1won?'youWin':'aiWin',p1won?'':'lose');
+      else showWin('🎉',p1won?'p1Win':'p2Win','');
+    },400);
+    return;
+  }
+  if(G.board[0].every((_,c)=>G.board.every(r=>r[c]!==0))){
+    G.over=true;renderC4();setTimeout(()=>showWin('🤝','draw','draw'),400);return;
+  }
+  G.turn=1-G.turn;
+  updateTurnDisplay();
+  if(vsAI&&G.turn===1) aiTimer=setTimeout(c4AIMove,500);
+}
+
+function checkC4Win(board){
+  const dirs=[[0,1],[1,0],[1,1],[1,-1]];
+  for(let r=0;r<C4_ROWS;r++) for(let c=0;c<C4_COLS;c++){
+    if(!board[r][c]) continue;
+    for(const [dr,dc] of dirs){
+      const cells=[[r,c]];
+      for(let k=1;k<4;k++){
+        const nr=r+dr*k,nc=c+dc*k;
+        if(nr<0||nr>=C4_ROWS||nc<0||nc>=C4_COLS||board[nr][nc]!==board[r][c]) break;
+        cells.push([nr,nc]);
+      }
+      if(cells.length===4) return cells;
+    }
+  }
+  return null;
+}
+
+function c4Undo(){
+  if(!G.history||G.history.length===0) return;
+  const undo1=()=>{
+    const col=G.history.pop();
+    for(let r=0;r<C4_ROWS;r++){if(G.board[r][col]!==0){G.board[r][col]=0;break;}}
+    G.turn=1-G.turn;
+  };
+  if(vsAI&&G.history.length>=2){undo1();undo1();G.turn=0;}
+  else if(!vsAI&&G.history.length>=1){undo1();}
+  G.over=false; G.winCells=null;
+  renderC4(); updateTurnDisplay();
+}
+
+// ── Connect 4 AI ─────────────────────────────────────────────────────────────
+function c4AIMove(){
+  const depths=[0,2,3,5,7];
+  const depth=depths[Math.min(aiLevel,4)];
+  let col=c4BestMove(G.board,-1,depth);
+  if(col<0) col=c4FirstOpen(G.board);
+  if(col>=0) c4Drop(col);
+}
+
+function c4FirstOpen(board){
+  for(let c=0;c<C4_COLS;c++) if(board[0][c]===0) return c;
+  return -1;
+}
+
+function c4BestMove(board,player,depth){
+  let best={score:-Infinity,col:-1};
+  for(let c=0;c<C4_COLS;c++){
+    let row=-1;
+    for(let r=C4_ROWS-1;r>=0;r--){if(board[r][c]===0){row=r;break;}}
+    if(row<0) continue;
+    const nb=board.map(r=>[...r]);
+    nb[row][c]=player;
+    const s=c4Minimax(nb,1,depth,false,player,board[3][3]||0,-Infinity,Infinity);
+    if(s>best.score){best={score:s,col:c};}
+  }
+  return best.col;
+}
+
+function c4Minimax(board,depth,maxDepth,isMax,aiPlayer,_,alpha,beta){
+  if(checkC4Win(board)){
+    const score=(isMax?-1:1)*(1000+maxDepth-depth);
+    return score;
+  }
+  if(depth>=maxDepth) return c4Eval(board,aiPlayer);
+  let best=isMax?-Infinity:Infinity;
+  for(let c=0;c<C4_COLS;c++){
+    let row=-1;
+    for(let r=C4_ROWS-1;r>=0;r--){if(board[r][c]===0){row=r;break;}}
+    if(row<0) continue;
+    const p=isMax?aiPlayer:-aiPlayer;
+    const nb=board.map(r=>[...r]); nb[row][c]=p;
+    const s=c4Minimax(nb,depth+1,maxDepth,!isMax,aiPlayer,0,alpha,beta);
+    if(isMax){best=Math.max(best,s);alpha=Math.max(alpha,s);}
+    else{best=Math.min(best,s);beta=Math.min(beta,s);}
+    if(beta<=alpha) break;
+  }
+  return best;
+}
+
+function c4Eval(board,aiPlayer){
+  let score=0;
+  const dirs=[[0,1],[1,0],[1,1],[1,-1]];
+  const evalWindow=(cells)=>{
+    const ai=cells.filter(v=>v===aiPlayer).length;
+    const hu=cells.filter(v=>v===-aiPlayer).length;
+    const em=cells.filter(v=>v===0).length;
+    if(ai===4) return 1000;
+    if(hu===4) return -1000;
+    if(ai===3&&em===1) return 8;
+    if(ai===2&&em===2) return 2;
+    if(hu===3&&em===1) return -9;
+    if(hu===2&&em===2) return -2;
+    return 0;
+  };
+  for(let r=0;r<C4_ROWS;r++) for(let c=0;c<C4_COLS;c++)
+    for(const [dr,dc] of dirs){
+      const cells=[];
+      for(let k=0;k<4;k++){
+        const nr=r+dr*k,nc=c+dc*k;
+        if(nr<0||nr>=C4_ROWS||nc<0||nc>=C4_COLS){cells.length=0;break;}
+        cells.push(board[nr][nc]);
+      }
+      if(cells.length===4) score+=evalWindow(cells);
+    }
+  // center column preference
+  for(let r=0;r<C4_ROWS;r++) if(board[r][3]===aiPlayer) score+=2;
+  return score;
+}
+
+// ── 2048 ──────────────────────────────────────────────────────────────────────
+const TILE_EMOJIS={
+  2:'😊',4:'😄',8:'😎',16:'🤩',32:'🥳',64:'😈',
+  128:'🔥',256:'⚡',512:'🌟',1024:'🎯',2048:'🏆'
+};
+
+function init2048(){
+  const saved=localStorage.getItem('bean2048best');
+  G={grid:Array.from({length:4},()=>Array(4).fill(0)),score:0,best:saved?parseInt(saved):0,over:false,won:false};
+  add2048Tile(); add2048Tile();
+  render2048();
+  updateScoreBar();
+  // keyboard
+  document.onkeydown=on2048Key;
+  // touch
+  cvs.onclick=null; cvs.onmousemove=null;
+  setupSwipe();
+}
+
+function add2048Tile(){
+  const empty=[];
+  for(let r=0;r<4;r++) for(let c=0;c<4;c++) if(!G.grid[r][c]) empty.push([r,c]);
+  if(!empty.length) return;
+  const [r,c]=empty[Math.floor(Math.random()*empty.length)];
+  G.grid[r][c]=Math.random()<0.85?2:4;
+}
+
+function render2048(){
+  const el=document.getElementById('grid2048');
+  el.innerHTML='';
+  el.style.display='grid';
+  el.style.gridTemplateColumns='repeat(4,1fr)';
+  for(let r=0;r<4;r++){
+    const row=document.createElement('div');
+    row.className='tile-row';
+    for(let c=0;c<4;c++){
+      const v=G.grid[r][c];
+      const tile=document.createElement('div');
+      tile.className='tile'+(v?' v'+v:'');
+      if(v){
+        const face=document.createElement('div');
+        face.className='tile-face';
+        face.textContent=TILE_EMOJIS[v]||'✨';
+        tile.appendChild(face);
+        const num=document.createElement('div');
+        num.textContent=v;
+        tile.appendChild(num);
+      }
+      row.appendChild(tile);
+    }
+    el.appendChild(row);
+  }
+  updateScoreBar2048();
+}
+
+function move2048(dir){
+  if(G.over) return;
+  const grid=G.grid;
+  let moved=false;
+  const slide=(row)=>{
+    const vals=row.filter(v=>v);
+    const merged=[];
+    let i=0;
+    while(i<vals.length){
+      if(i+1<vals.length&&vals[i]===vals[i+1]){
+        const nv=vals[i]*2;
+        merged.push(nv);
+        G.score+=nv;
+        if(G.score>G.best){G.best=G.score;localStorage.setItem('bean2048best',G.best);}
+        i+=2;
+      } else {merged.push(vals[i]);i++;}
+    }
+    while(merged.length<4) merged.push(0);
+    return merged;
+  };
+  if(dir==='left'){
+    for(let r=0;r<4;r++){const n=slide(grid[r]);if(n.join()!==grid[r].join()){grid[r]=n;moved=true;}}
+  } else if(dir==='right'){
+    for(let r=0;r<4;r++){const n=slide([...grid[r]].reverse()).reverse();if(n.join()!==grid[r].join()){grid[r]=n;moved=true;}}
+  } else if(dir==='up'){
+    for(let c=0;c<4;c++){
+      const col=grid.map(r=>r[c]);
+      const n=slide(col);
+      n.forEach((v,r)=>{if(v!==grid[r][c]){grid[r][c]=v;moved=true;}});
+    }
+  } else if(dir==='down'){
+    for(let c=0;c<4;c++){
+      const col=grid.map(r=>r[c]).reverse();
+      const n=slide(col).reverse();
+      n.forEach((v,r)=>{if(v!==grid[r][c]){grid[r][c]=v;moved=true;}});
+    }
+  }
+  if(moved){
+    add2048Tile();
+    render2048();
+    if(grid.some(r=>r.includes(2048))&&!G.won){
+      G.won=true;
+      setTimeout(()=>showWin('🏆','youWin','','2048! 🎉'),300);
+    } else if(!can2048Move()){
+      G.over=true;
+      setTimeout(()=>showWin('😵','gameOver','lose'),300);
+    }
+  }
+}
+
+function can2048Move(){
+  for(let r=0;r<4;r++) for(let c=0;c<4;c++){
+    if(!G.grid[r][c]) return true;
+    if(c<3&&G.grid[r][c]===G.grid[r][c+1]) return true;
+    if(r<3&&G.grid[r][c]===G.grid[r+1][c]) return true;
+  }
+  return false;
+}
+
+function on2048Key(e){
+  const map={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down'};
+  if(map[e.key]){e.preventDefault();move2048(map[e.key]);}
+}
+
+let touchStart={x:0,y:0};
+function setupSwipe(){
+  const el=document.getElementById('grid2048');
+  el.ontouchstart=e=>{touchStart={x:e.touches[0].clientX,y:e.touches[0].clientY};};
+  el.ontouchend=e=>{
+    const dx=e.changedTouches[0].clientX-touchStart.x;
+    const dy=e.changedTouches[0].clientY-touchStart.y;
+    if(Math.abs(dx)>Math.abs(dy)){move2048(dx>0?'right':'left');}
+    else{move2048(dy>0?'down':'up');}
+  };
+}
+
+// ── Memory Match ─────────────────────────────────────────────────────────────
+const MEM_EMOJIS=['🐱','🐶','🐸','🦊','🐼','🐨','🦁','🐯','🐙','🦋','🌸','⭐','🍕','🎈','🌈','🦄'];
+
+function initMem(){
+  G={cards:[],flipped:[],matched:new Set(),moves:0,pairs:0,lock:false};
+  // 8 pairs = 16 cards
+  const chosen=MEM_EMOJIS.slice(0,8);
+  const deck=[...chosen,...chosen].sort(()=>Math.random()-.5);
+  G.cards=deck.map((em,i)=>({id:i,emoji:em,face:false,matched:false}));
+  renderMem();
+  updateScoreBar();
+  document.onkeydown=null;
+}
+
+function renderMem(){
+  const area=document.getElementById('memCardArea');
+  area.innerHTML='';
+  G.cards.forEach((card,i)=>{
+    const el=document.createElement('div');
+    el.className='mem-card'+(card.face?' flipped':'')+(card.matched?' matched':'');
+    el.innerHTML=`<div class="card-front">🎴</div><div class="card-back">${card.emoji}</div>`;
+    if(!card.matched) el.onclick=()=>memFlip(i);
+    area.appendChild(el);
+  });
+  const pairs=document.getElementById('memPairs');
+  const moves=document.getElementById('memMoves');
+  if(pairs) pairs.textContent=G.pairs;
+  if(moves) moves.textContent=G.moves;
+}
+
+function memFlip(i){
+  if(G.lock||G.cards[i].face||G.cards[i].matched) return;
+  G.cards[i].face=true;
+  G.flipped.push(i);
+  renderMem();
+  if(G.flipped.length===2){
+    G.moves++;
+    G.lock=true;
+    const [a,b]=G.flipped;
+    if(G.cards[a].emoji===G.cards[b].emoji){
+      G.cards[a].matched=true; G.cards[b].matched=true;
+      G.pairs++;
+      G.flipped=[];
+      G.lock=false;
+      renderMem();
+      if(G.pairs===8) setTimeout(()=>showWin('🎉','youWin','',`${t('moves')}: ${G.moves}`),400);
+    } else {
+      setTimeout(()=>{
+        G.cards[a].face=false; G.cards[b].face=false;
+        G.flipped=[];G.lock=false;renderMem();
+      },900);
+    }
+  }
+}
+
+// ── Tip / Help ────────────────────────────────────────────────────────────────
+function showTip(){
+  const tips={ttt:'tipTtt',c4:'tipC4',g2048:'tip2048',mem:'tipMem'};
+  document.getElementById('tipTitle').textContent=
+    mode==='ttt'?t('modeTtt'):mode==='c4'?t('modeC4'):mode==='g2048'?t('mode2048'):t('modeMem');
+  document.getElementById('tipBody').innerHTML=t(tips[mode]);
+  document.getElementById('tipOverlay').classList.remove('hidden');
+}
+function closeTip(){document.getElementById('tipOverlay').classList.add('hidden');}
+
+// ── Startup ──────────────────────────────────────────────────────────────────
+setupMode();
+newGame();
+applyLang();
+</script>
+</body>
+</html>
