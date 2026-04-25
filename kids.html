@@ -84,56 +84,85 @@ body{
 /* ── 2048 grid ── */
 #grid2048{
   display:none;
-  background:#b8d4e8;
+  background:#8ab4cc;
   border-radius:18px;
-  padding:10px;
-  gap:8px;
+  padding:12px;
+  gap:10px;
   box-shadow:0 8px 32px rgba(0,0,0,0.28);
+  /* 4-column grid — tiles go in directly, no wrapper rows */
+  grid-template-columns:repeat(4,86px);
+  grid-template-rows:repeat(4,86px);
 }
-.tile-row{display:flex;gap:8px}
 .tile{
-  width:90px;height:90px;border-radius:12px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:26px;font-weight:900;font-family:inherit;
-  transition:all .1s;
-  background:#cce0f0;color:transparent;
+  width:86px;height:86px;border-radius:12px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:13px;font-weight:900;font-family:inherit;
+  transition:background .12s,transform .1s;
+  background:#b8d4e8;color:transparent;
+  gap:1px;
 }
-.tile.v2{background:#fff9e6;color:#776e65;font-size:32px}
-.tile.v4{background:#fff0c8;color:#776e65;font-size:32px}
-.tile.v8{background:#ffb86b;color:#fff;font-size:32px}
-.tile.v16{background:#ff9a4a;color:#fff;font-size:28px}
-.tile.v32{background:#ff7b54;color:#fff;font-size:28px}
-.tile.v64{background:#f45c30;color:#fff;font-size:28px}
-.tile.v128{background:#edcf72;color:#fff;font-size:24px}
-.tile.v256{background:#edcc61;color:#fff;font-size:24px}
-.tile.v512{background:#edc850;color:#fff;font-size:24px}
-.tile.v1024{background:#edc53f;color:#fff;font-size:20px}
-.tile.v2048{background:#edc22e;color:#fff;font-size:20px;animation:glow .6s ease infinite alternate}
+.tile.new{animation:pop .18s ease-out}
+@keyframes pop{0%{transform:scale(.4)}60%{transform:scale(1.12)}100%{transform:scale(1)}}
+.tile.v2{background:#fff9e6;color:#776e65}
+.tile.v4{background:#fff0c8;color:#776e65}
+.tile.v8{background:#ffb86b;color:#fff}
+.tile.v16{background:#ff9a4a;color:#fff}
+.tile.v32{background:#ff7b54;color:#fff}
+.tile.v64{background:#f45c30;color:#fff}
+.tile.v128{background:#edcf72;color:#fff}
+.tile.v256{background:#edcc61;color:#fff}
+.tile.v512{background:#edc850;color:#fff}
+.tile.v1024{background:#edc53f;color:#fff}
+.tile.v2048{background:#edc22e;color:#fff;animation:glow .6s ease infinite alternate}
 @keyframes glow{from{box-shadow:0 0 10px #f4d03f}to{box-shadow:0 0 28px #f4d03f,0 0 6px #fff}}
-.tile .tile-face{font-size:22px;margin-bottom:2px}
+.tile .tile-face{font-size:26px;line-height:1}
+.tile .tile-num{font-size:16px;font-weight:900;line-height:1}
+.tile.v128 .tile-num,.tile.v256 .tile-num,.tile.v512 .tile-num{font-size:14px}
+.tile.v1024 .tile-num,.tile.v2048 .tile-num{font-size:12px}
 
 /* ── Memory grid ── */
 #memGrid{
   display:none;
-  flex-wrap:wrap;
-  gap:10px;
-  justify-content:center;
-  max-width:520px;
+  flex-direction:column;
+  align-items:center;
+  gap:12px;
+}
+#memCardArea{
+  display:flex;flex-wrap:wrap;gap:10px;justify-content:center;
+  max-width:500px;
+  perspective:800px;
 }
 .mem-card{
-  width:80px;height:80px;border-radius:14px;
+  width:82px;height:82px;border-radius:14px;
   cursor:pointer;position:relative;
-  transition:transform .35s;transform-style:preserve-3d;
+  transition:transform .42s cubic-bezier(.4,0,.2,1);
+  transform-style:preserve-3d;
+  perspective:600px;
 }
 .mem-card.flipped{transform:rotateY(180deg)}
-.mem-card.matched{transform:rotateY(180deg);opacity:.7;cursor:default}
+.mem-card.matched{transform:rotateY(180deg);cursor:default}
 .card-front,.card-back{
   position:absolute;inset:0;border-radius:14px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:36px;backface-visibility:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:38px;backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
 }
-.card-front{background:linear-gradient(135deg,#2e6da4,#5ba0d8);box-shadow:0 4px 12px rgba(0,0,0,0.2)}
-.card-back{background:#fff;box-shadow:0 4px 12px rgba(0,0,0,0.15);transform:rotateY(180deg)}
+.card-front{
+  background:linear-gradient(145deg,#3a7ec0,#5ba8e0);
+  box-shadow:0 4px 14px rgba(0,0,0,0.22);
+}
+.card-front::after{
+  content:'🎴';font-size:32px;
+}
+.card-back{
+  background:#fff;
+  box-shadow:0 4px 14px rgba(0,0,0,0.15);
+  transform:rotateY(180deg);
+}
+.mem-card.matched .card-back{
+  background:linear-gradient(145deg,#d4f0c0,#b0e090);
+  box-shadow:0 0 14px rgba(80,200,80,0.4);
+}
 
 /* ── Controls ── */
 .controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center}
@@ -389,6 +418,7 @@ function setupMode(){
     updateScoreBar2048();
   } else if(mode==='mem'){
     mg.style.display='flex';
+    mg.style.flexDirection='column';
     oc.style.display='none'; ub.style.display='none';
     sub.textContent=lang==='en'?'Find all matching pairs!':'找出所有配对！';
   }
@@ -892,8 +922,8 @@ function init2048(){
   const saved=localStorage.getItem('bean2048best');
   G={grid:Array.from({length:4},()=>Array(4).fill(0)),score:0,best:saved?parseInt(saved):0,over:false,won:false};
   add2048Tile(); add2048Tile();
+  updateScoreBar();   // create DOM first
   render2048();
-  updateScoreBar();
   // keyboard
   document.onkeydown=on2048Key;
   // touch
@@ -904,35 +934,32 @@ function init2048(){
 function add2048Tile(){
   const empty=[];
   for(let r=0;r<4;r++) for(let c=0;c<4;c++) if(!G.grid[r][c]) empty.push([r,c]);
-  if(!empty.length) return;
+  if(!empty.length) return null;
   const [r,c]=empty[Math.floor(Math.random()*empty.length)];
   G.grid[r][c]=Math.random()<0.85?2:4;
+  return [r,c];
 }
 
-function render2048(){
+function render2048(newCells){
   const el=document.getElementById('grid2048');
   el.innerHTML='';
   el.style.display='grid';
-  el.style.gridTemplateColumns='repeat(4,1fr)';
-  for(let r=0;r<4;r++){
-    const row=document.createElement('div');
-    row.className='tile-row';
-    for(let c=0;c<4;c++){
-      const v=G.grid[r][c];
-      const tile=document.createElement('div');
-      tile.className='tile'+(v?' v'+v:'');
-      if(v){
-        const face=document.createElement('div');
-        face.className='tile-face';
-        face.textContent=TILE_EMOJIS[v]||'✨';
-        tile.appendChild(face);
-        const num=document.createElement('div');
-        num.textContent=v;
-        tile.appendChild(num);
-      }
-      row.appendChild(tile);
+  for(let r=0;r<4;r++) for(let c=0;c<4;c++){
+    const v=G.grid[r][c];
+    const isNew=newCells&&newCells.some(([nr,nc])=>nr===r&&nc===c);
+    const tile=document.createElement('div');
+    tile.className='tile'+(v?' v'+v:'')+(isNew?' new':'');
+    if(v){
+      const face=document.createElement('div');
+      face.className='tile-face';
+      face.textContent=TILE_EMOJIS[v]||'✨';
+      tile.appendChild(face);
+      const num=document.createElement('div');
+      num.className='tile-num';
+      num.textContent=v;
+      tile.appendChild(num);
     }
-    el.appendChild(row);
+    el.appendChild(tile);
   }
   updateScoreBar2048();
 }
@@ -975,8 +1002,8 @@ function move2048(dir){
     }
   }
   if(moved){
-    add2048Tile();
-    render2048();
+    const newCell=add2048Tile();
+    render2048(newCell?[newCell]:[]);
     if(grid.some(r=>r.includes(2048))&&!G.won){
       G.won=true;
       setTimeout(()=>showWin('🏆','youWin','','2048! 🎉'),300);
@@ -1033,7 +1060,9 @@ function renderMem(){
   G.cards.forEach((card,i)=>{
     const el=document.createElement('div');
     el.className='mem-card'+(card.face?' flipped':'')+(card.matched?' matched':'');
-    el.innerHTML=`<div class="card-front">🎴</div><div class="card-back">${card.emoji}</div>`;
+    // card-front: blue back shown by default (CSS ::after adds 🎴 emoji)
+    // card-back: the emoji, shown when flipped
+    el.innerHTML=`<div class="card-front"></div><div class="card-back">${card.emoji}</div>`;
     if(!card.matched) el.onclick=()=>memFlip(i);
     area.appendChild(el);
   });
