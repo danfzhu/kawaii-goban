@@ -750,8 +750,15 @@ function m3EaseBack(t){return 1+2.7*Math.pow(t-1,3)+1.7*Math.pow(t-1,2);}
 function m3StopRaf(){if(m3AF){cancelAnimationFrame(m3AF);m3AF=null;}}
 function m3Tick(){
   const now=Date.now(); renderMatch3(now);
-  if(G.anims&&G.anims.some(a=>now<a.startT+a.dur)) m3AF=requestAnimationFrame(m3Tick);
-  else{m3AF=null;G.anims=[];if(G._m3done){const f=G._m3done;G._m3done=null;f();}}
+  if(G.anims&&G.anims.some(a=>now<a.startT+a.dur)){
+    m3AF=requestAnimationFrame(m3Tick);
+  } else {
+    const comboOnScreen=G.m3Combo&&G.m3Combo.till>now;
+    m3AF=null; G.anims=[];
+    if(G._m3done){const f=G._m3done;G._m3done=null;f();}
+    // keep ticking until combo text fades, unless a new RAF already started
+    if(!m3AF&&comboOnScreen) m3AF=requestAnimationFrame(m3Tick);
+  }
 }
 function m3Play(anims,done){m3StopRaf();G.anims=anims;G._m3done=done||null;m3AF=requestAnimationFrame(m3Tick);}
 
@@ -760,11 +767,14 @@ function initMatch3(){
   cvs.width=M3_CELL*M3_COLS; cvs.height=M3_CELL*M3_ROWS; cvs.style.cursor='pointer';
   m3StopRaf();
   const maxMov=M3_MOVES[m3Difficulty]||25;
-  G={board:null,sel:null,score:0,animating:false,combo:0,anims:[],_m3done:null,
+  G={board:null,sel:null,drag:null,score:0,animating:false,combo:0,anims:[],_m3done:null,
      m3Combo:null, specials:new Map(), lastSwap:null, moves:maxMov};
   do{G.board=Array.from({length:M3_ROWS},()=>Array.from({length:M3_COLS},()=>Math.floor(Math.random()*M3_GEMS.length)));
   }while(findM3Matches(G.board).length>0);
-  cvs.onclick=m3Click;
+  cvs.onclick=null; cvs.style.touchAction='none';
+  cvs.onpointerdown=m3PointerDown;
+  cvs.onpointermove=m3PointerMove;
+  cvs.onpointerup=cvs.onpointercancel=m3PointerUp;
   m3UpdateMoves();
   updateScore(0); updatePill(t('playing'));
   renderMatch3(Date.now());
@@ -776,12 +786,20 @@ function renderMatch3(now=Date.now()){
   const am=new Map();
   (G.anims||[]).forEach(a=>{const k=a.r*M3_COLS+a.c;am.set(k,(am.get(k)||[]).concat(a));});
 
+  // ── drag-to-swap: determine hovered target cell ──
+  let dragTarget=null;
+  if(G.drag){const tc=Math.floor(G.drag.px/C),tr=Math.floor(G.drag.py/C);
+    if(tr>=0&&tr<M3_ROWS&&tc>=0&&tc<M3_COLS&&Math.abs(tr-G.drag.r)+Math.abs(tc-G.drag.c)===1) dragTarget={r:tr,c:tc};}
+
   for(let r=0;r<M3_ROWS;r++) for(let c=0;c<M3_COLS;c++){
     const x=c*C,y=r*C,v=G.board[r][c];
-    const isSel=G.sel&&G.sel.r===r&&G.sel.c===c;
+    const isDragSrc=G.drag&&r===G.drag.r&&c===G.drag.c;
+    const isDragTgt=dragTarget&&r===dragTarget.r&&c===dragTarget.c;
+    const isSel=!G.drag&&G.sel&&G.sel.r===r&&G.sel.c===c;
     const sp=G.specials.get(r*M3_COLS+c)||null;
-    ctx.fillStyle=isSel?'rgba(255,255,255,0.28)':'rgba(255,255,255,0.07)';
+    ctx.fillStyle=isDragTgt?'rgba(100,200,255,0.35)':isSel?'rgba(255,255,255,0.28)':'rgba(255,255,255,0.07)';
     roundRect(ctx,x+2,y+2,C-4,C-4,7); ctx.fill();
+    if(isDragSrc){m3DrawGem(x+C/2,y+C/2,C,v,1,0.22,false,sp);continue;}
     const aa=am.get(r*M3_COLS+c)||[];
     const swA=aa.find(a=>a.type==='swap');
     const drA=aa.find(a=>a.type==='drop');
@@ -828,6 +846,14 @@ function renderMatch3(now=Date.now()){
     }
     ctx.restore();
   });
+
+  // ── drag floating gem (drawn above board, below combo text) ──
+  if(G.drag){
+    const dg=G.drag,dv=G.board[dg.r][dg.c],dsp=G.specials.get(dg.r*M3_COLS+dg.c)||null;
+    ctx.save(); ctx.fillStyle='rgba(0,0,0,0.18)';
+    ctx.beginPath(); ctx.ellipse(dg.px+3,dg.py+8,C*.36,C*.2,0,0,Math.PI*2); ctx.fill(); ctx.restore();
+    m3DrawGem(dg.px,dg.py,C,dv,1.15,1,false,dsp);
+  }
 
   // ── combo flash ──
   if(G.m3Combo&&G.m3Combo.till>now){
@@ -913,6 +939,56 @@ function m3Click(e){
   if(sr===r&&sc===c){G.sel=null;renderMatch3();return;}
   if(Math.abs(r-sr)+Math.abs(c-sc)===1){G.sel=null;m3TrySwap(r,c,sr,sc);}
   else{G.sel={r,c};renderMatch3();}
+}
+function m3PointerDown(e){
+  if(mode!=='match3'||G.animating||G.drag) return;
+  const rect=cvs.getBoundingClientRect(),C=M3_CELL;
+  const x=e.clientX-rect.left,y=e.clientY-rect.top;
+  const c=Math.floor(x/C),r=Math.floor(y/C);
+  if(r<0||r>=M3_ROWS||c<0||c>=M3_COLS||G.board[r][c]<0) return;
+  e.preventDefault(); cvs.setPointerCapture(e.pointerId);
+  G.drag={r,c,startX:x,startY:y,px:x,py:y,pid:e.pointerId};
+  G.sel=null; renderMatch3();
+}
+function m3PointerMove(e){
+  if(mode!=='match3'||!G.drag||G.drag.pid!==e.pointerId) return;
+  const rect=cvs.getBoundingClientRect();
+  G.drag.px=e.clientX-rect.left; G.drag.py=e.clientY-rect.top;
+  renderMatch3();
+}
+function m3PointerUp(e){
+  if(mode!=='match3'||!G.drag||G.drag.pid!==e.pointerId) return;
+  const drag=G.drag,rect=cvs.getBoundingClientRect();
+  const x=e.clientX-rect.left,y=e.clientY-rect.top;
+  const C=M3_CELL,srcX=drag.c*C+C/2,srcY=drag.r*C+C/2;
+  // short tap → keep click-to-select behaviour
+  if(Math.hypot(x-drag.startX,y-drag.startY)<C*0.28){
+    G.drag=null;
+    if(G.sel){const{r:sr,c:sc}=G.sel;
+      if(sr===drag.r&&sc===drag.c){G.sel=null;renderMatch3();return;}
+      if(Math.abs(drag.r-sr)+Math.abs(drag.c-sc)===1){G.sel=null;m3TrySwap(drag.r,drag.c,sr,sc);return;}
+    }
+    G.sel={r:drag.r,c:drag.c}; renderMatch3(); return;
+  }
+  // dragged far enough — check if released on an adjacent cell
+  const tc=Math.floor(x/C),tr=Math.floor(y/C);
+  if(tr>=0&&tr<M3_ROWS&&tc>=0&&tc<M3_COLS&&Math.abs(tr-drag.r)+Math.abs(tc-drag.c)===1){
+    G.drag=null; G.sel=null; m3TrySwap(drag.r,drag.c,tr,tc);
+  } else {
+    // released early / non-adjacent → animate gem back to source
+    m3DragSnap(drag.px,drag.py,srcX,srcY);
+  }
+}
+function m3DragSnap(fromX,fromY,toX,toY){
+  const startT=Date.now(),dur=220;
+  function tick(){
+    const now=Date.now(),t=Math.min(1,(now-startT)/dur);
+    const p=1-(1-t)*(1-t); // ease-out quad
+    if(G.drag){G.drag.px=fromX+(toX-fromX)*p; G.drag.py=fromY+(toY-fromY)*p;}
+    renderMatch3(now);
+    if(t<1) requestAnimationFrame(tick); else {G.drag=null; G.sel=null; renderMatch3();}
+  }
+  requestAnimationFrame(tick);
 }
 
 function m3TrySwap(r1,c1,r2,c2){
