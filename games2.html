@@ -738,7 +738,7 @@ function roundRect(ctx,x,y,w,h,r){
 // MATCH-3  (animated + power-up gems: row/col/cross/rainbow bombs)
 // ═══════════════════════════════════════════════════════════════════════════════
 const M3_ROWS=8, M3_COLS=8;
-let M3_CELL, m3AF=null, m3ComboAF=null;
+let M3_CELL, m3AF=null, m3ComboIv=null;
 const M3_GEMS=['🍎','🍊','🍋','🍇','🫐','🍓'];
 const M3_COLORS=['#ff6b6b','#ffa94d','#ffd43b','#cc5de8','#4dabf7','#f783ac'];
 // special gem types: 'row' | 'col' | 'cross' | 'rainbow'
@@ -757,18 +757,16 @@ function m3Tick(){
     if(G._m3done){const f=G._m3done;G._m3done=null;f();}
   }
 }
-// Dedicated fade loop for combo text — runs independently of the animation RAF.
-// Always re-renders so the fade plays out even after m3Tick has stopped.
-// Double-rendering with m3Tick in the same frame is harmless (identical canvas state).
-function m3TickCombo(){
-  const now=Date.now();
-  renderMatch3(now);
-  if(!G.m3Combo||now>=G.m3Combo.till){
-    G.m3Combo=null; m3ComboAF=null;
-    renderMatch3(); // one clean frame with no combo text
-    return;
-  }
-  m3ComboAF=requestAnimationFrame(m3TickCombo);
+function m3StartComboFade(){
+  clearInterval(m3ComboIv);
+  m3ComboIv=setInterval(()=>{
+    const now=Date.now();
+    renderMatch3(now);
+    if(!G.m3Combo||now>=G.m3Combo.till){
+      clearInterval(m3ComboIv); m3ComboIv=null;
+      G.m3Combo=null; renderMatch3();
+    }
+  },15);
 }
 function m3Play(anims,done){m3StopRaf();G.anims=anims;G._m3done=done||null;m3AF=requestAnimationFrame(m3Tick);}
 
@@ -776,7 +774,7 @@ function initMatch3(){
   M3_CELL=Math.min(52,Math.floor(Math.min(window.innerWidth-32,440)/M3_COLS));
   cvs.width=M3_CELL*M3_COLS; cvs.height=M3_CELL*M3_ROWS; cvs.style.cursor='pointer';
   m3StopRaf();
-  if(m3ComboAF){cancelAnimationFrame(m3ComboAF);m3ComboAF=null;}
+  clearInterval(m3ComboIv); m3ComboIv=null;
   const maxMov=M3_MOVES[m3Difficulty]||25;
   G={board:null,sel:null,drag:null,score:0,animating:false,combo:0,anims:[],_m3done:null,
      m3Combo:null, specials:new Map(), lastSwap:null, moves:maxMov};
@@ -1138,8 +1136,7 @@ function m3ProcessMatches(extraKeys=new Set()){
   updateScore(G.score);
   if(G.combo>1){
     G.m3Combo={txt:`COMBO ×${G.combo}!`,till:Date.now()+900};
-    if(m3ComboAF) cancelAnimationFrame(m3ComboAF); // restart timer on higher combos
-    m3ComboAF=requestAnimationFrame(m3TickCombo);
+    m3StartComboFade();
   }
   // show special name
   if(newSpecials.length){
