@@ -40,6 +40,8 @@ body{
 #cvs{display:block;cursor:pointer}
 .controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center}
 .ctrl-row{display:flex;gap:7px;flex-wrap:wrap;justify-content:center}
+.m3-tip{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:18px;background:rgba(255,255,255,0.88);font-size:11.5px;font-weight:700;color:#1a4a2a;box-shadow:0 2px 6px rgba(0,0,0,0.11);white-space:nowrap}
+.m3-tip .tip-icon{font-size:14px;line-height:1}
 .ctrl-btn{padding:8px 17px;border-radius:22px;border:2px solid rgba(255,255,255,0.7);background:rgba(255,255,255,0.75);cursor:pointer;font-size:13px;color:#1a4a2a;font-weight:700;font-family:inherit;box-shadow:0 2px 6px rgba(0,0,0,0.09);transition:all .15s}
 .ctrl-btn:hover:not(:disabled){background:rgba(255,255,255,0.95);transform:translateY(-1px)}
 .ctrl-btn:disabled{opacity:.35;cursor:not-allowed}
@@ -175,6 +177,12 @@ body{
       <button class="speed-btn" data-diff="hard" onclick="setM3Diff(this)">🔥 <span data-k="m3Hard">Hard</span></button>
     </div>
   </div>
+  <div class="ctrl-row" id="m3Legend" style="display:none">
+    <span class="m3-tip"><span class="tip-icon">↔️</span><span data-k="tipRow">消整行</span></span>
+    <span class="m3-tip"><span class="tip-icon">↕️</span><span data-k="tipCol">消整列</span></span>
+    <span class="m3-tip"><span class="tip-icon">✦</span><span data-k="tipCross">消十字</span></span>
+    <span class="m3-tip"><span class="tip-icon">🌈</span><span data-k="tipRainbow">消同色</span></span>
+  </div>
   <div class="ctrl-row">
     <button class="ctrl-btn primary" onclick="newGame()">✨ <span data-k="newGame">New Game</span></button>
   </div>
@@ -208,6 +216,7 @@ const TI={
     modeSnake:'Snake', modeMatch3:'Match 3', modeLian:'Connect', modeMole:'Whack-a-Mole',
     score:'Score', best:'Best', newGame:'New Game', again:'Play Again', tipClose:'Got it!',
     slow:'Slow', fast:'Fast', turbo:'Turbo', m3Easy:'Easy', m3Med:'Medium', m3Hard:'Hard', m3Moves:'Moves',
+    tipRow:'Clears row', tipCol:'Clears column', tipCross:'Clears cross', tipRainbow:'Same color',
     ready:'▶ Ready', playing:'Playing!', gameOver:'Game Over', youWin:'You Win! 🎉',
     tipSnake:'<b>Snake:</b> Arrow keys / WASD / D-pad to steer. Eat 🍎 to grow!<br><br>Power-ups appear and vanish (blink = almost gone!):<br>⚡ Speed Up &nbsp; 🐢 Slow Mo &nbsp; ✂️ Snip (shorter)<br>⭐ +5 pts &nbsp; 🛡️ Shield (pass wall once) &nbsp; 💣 Bomb (avoid!)',
     tipMatch3:'<b>Match 3:</b> Click a gem, then click an adjacent gem to swap. Match 3 or more in a row/column to clear them! Score combos for bonus points.',
@@ -218,6 +227,7 @@ const TI={
     modeSnake:'贪吃蛇', modeMatch3:'三消', modeLian:'连连看', modeMole:'打地鼠',
     score:'分数', best:'最高分', newGame:'新游戏', again:'再来一局', tipClose:'好的！',
     slow:'慢速', fast:'快速', turbo:'极速', m3Easy:'简单', m3Med:'普通', m3Hard:'困难', m3Moves:'步数',
+    tipRow:'消整行', tipCol:'消整列', tipCross:'消十字', tipRainbow:'消同色',
     ready:'▶ 准备', playing:'游戏中！', gameOver:'游戏结束', youWin:'你赢了！🎉',
     tipSnake:'<b>贪吃蛇：</b>方向键/WASD/虚拟键控制，吃🍎长大！<br><br>道具会出现然后消失（闪烁=快没了）：<br>⚡加速 &nbsp; 🐢减速 &nbsp; ✂️变短 &nbsp; ⭐+5分 &nbsp; 🛡️护盾（穿墙一次） &nbsp; 💣炸弹（要躲开！）',
     tipMatch3:'<b>三消：</b>点击一颗宝石，再点击相邻宝石来交换。连成3个以上相同的即可消除！',
@@ -283,6 +293,7 @@ function setupMode(){
   const ss=document.getElementById('snakeSpeed');
   ss.style.display='none';
   document.getElementById('m3Diff').style.display='none';
+  document.getElementById('m3Legend').style.display='none';
   document.getElementById('m3MovesItem').style.display='none';
   setDpad(false);
   if(mode==='snake'){
@@ -295,6 +306,7 @@ function setupMode(){
     document.getElementById('mainTitle').textContent='Match 3 💎';
     sub.textContent=lang==='en'?'Swap gems, match 3+!':'交换宝石，连消3个！';
     document.getElementById('m3Diff').style.display='flex';
+    document.getElementById('m3Legend').style.display='flex';
     document.getElementById('m3MovesItem').style.display='';
     document.getElementById('m3MovesLbl').textContent=t('m3Moves');
     document.onkeydown=null;
@@ -906,33 +918,52 @@ function m3DrawGem(cx,cy,C,gem,scale,alpha,sel,special){
     ctx.font=`${C*.38}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(M3_GEMS[gem],0,C*.01);
   }
-  // ── special overlays ──
-  if(special){
-    ctx.strokeStyle='rgba(255,255,255,0.85)'; ctx.lineCap='round';
+  // ── special overlays (cuter redesign) ──
+  if(special && special.type!=='rainbow'){
+    ctx.save();
     switch(special.type){
-      case 'row':
-        ctx.lineWidth=C*.065;
-        ctx.beginPath(); ctx.moveTo(-C*.33,-C*.1); ctx.lineTo(C*.33,-C*.1); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(-C*.33,C*.1); ctx.lineTo(C*.33,C*.1); ctx.stroke();
-        ctx.fillStyle='rgba(255,255,255,0.85)';
-        ctx.beginPath(); ctx.moveTo(-C*.37,0); ctx.lineTo(-C*.29,-C*.11); ctx.lineTo(-C*.29,C*.11); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(C*.37,0); ctx.lineTo(C*.29,-C*.11); ctx.lineTo(C*.29,C*.11); ctx.fill();
+      case 'row': {
+        // Warm golden sweep band + white arrowheads
+        const gr=ctx.createLinearGradient(-C*.4,0,C*.4,0);
+        gr.addColorStop(0,'rgba(255,235,40,0)'); gr.addColorStop(0.18,'rgba(255,235,40,0.86)');
+        gr.addColorStop(0.82,'rgba(255,235,40,0.86)'); gr.addColorStop(1,'rgba(255,235,40,0)');
+        ctx.fillStyle=gr;
+        roundRect(ctx,-C*.4,-C*.09,C*.8,C*.18,C*.09); ctx.fill();
+        ctx.fillStyle='#fff'; ctx.shadowColor='rgba(255,210,0,0.9)'; ctx.shadowBlur=8;
+        ctx.beginPath(); ctx.moveTo(-C*.38,0); ctx.lineTo(-C*.28,-C*.1); ctx.lineTo(-C*.28,C*.1); ctx.fill();
+        ctx.beginPath(); ctx.moveTo( C*.38,0); ctx.lineTo( C*.28,-C*.1); ctx.lineTo( C*.28,C*.1); ctx.fill();
         break;
-      case 'col':
-        ctx.lineWidth=C*.065;
-        ctx.beginPath(); ctx.moveTo(-C*.1,-C*.33); ctx.lineTo(-C*.1,C*.33); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(C*.1,-C*.33); ctx.lineTo(C*.1,C*.33); ctx.stroke();
-        ctx.fillStyle='rgba(255,255,255,0.85)';
-        ctx.beginPath(); ctx.moveTo(0,-C*.37); ctx.lineTo(-C*.11,-C*.29); ctx.lineTo(C*.11,-C*.29); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(0,C*.37); ctx.lineTo(-C*.11,C*.29); ctx.lineTo(C*.11,C*.29); ctx.fill();
+      }
+      case 'col': {
+        // Cool cyan sweep band + white arrowheads
+        const gc=ctx.createLinearGradient(0,-C*.4,0,C*.4);
+        gc.addColorStop(0,'rgba(60,215,255,0)'); gc.addColorStop(0.18,'rgba(60,215,255,0.86)');
+        gc.addColorStop(0.82,'rgba(60,215,255,0.86)'); gc.addColorStop(1,'rgba(60,215,255,0)');
+        ctx.fillStyle=gc;
+        roundRect(ctx,-C*.09,-C*.4,C*.18,C*.8,C*.09); ctx.fill();
+        ctx.fillStyle='#fff'; ctx.shadowColor='rgba(40,180,255,0.9)'; ctx.shadowBlur=8;
+        ctx.beginPath(); ctx.moveTo(0,-C*.38); ctx.lineTo(-C*.1,-C*.28); ctx.lineTo(C*.1,-C*.28); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(0, C*.38); ctx.lineTo(-C*.1, C*.28); ctx.lineTo(C*.1, C*.28); ctx.fill();
         break;
-      case 'cross':
-        ctx.lineWidth=C*.07;
-        for(let i=0;i<4;i++){ctx.save();ctx.rotate(i*Math.PI/4);ctx.beginPath();ctx.moveTo(0,-C*.14);ctx.lineTo(0,-C*.37);ctx.stroke();ctx.restore();}
-        ctx.fillStyle='rgba(255,255,255,0.92)';
-        ctx.beginPath(); ctx.arc(0,0,C*.1,0,Math.PI*2); ctx.fill();
+      }
+      case 'cross': {
+        // ✦ four-pointed sparkle star with warm glow
+        ctx.fillStyle='rgba(255,255,255,0.93)';
+        ctx.shadowColor='rgba(255,235,80,0.95)'; ctx.shadowBlur=10;
+        for(let i=0;i<4;i++){
+          ctx.save(); ctx.rotate(i*Math.PI/2);
+          ctx.beginPath();
+          ctx.moveTo(-C*.07,-C*.13); ctx.lineTo(0,-C*.38); ctx.lineTo(C*.07,-C*.13);
+          ctx.closePath(); ctx.fill();
+          ctx.restore();
+        }
+        ctx.shadowBlur=5;
+        ctx.fillStyle='rgba(255,250,180,1)';
+        ctx.beginPath(); ctx.arc(0,0,C*.09,0,Math.PI*2); ctx.fill();
         break;
+      }
     }
+    ctx.restore();
   }
   if(sel){ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(0,0,C*.39,0,Math.PI*2);ctx.stroke();}
   ctx.restore();
