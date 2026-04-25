@@ -758,15 +758,16 @@ function m3Tick(){
   }
 }
 // Dedicated fade loop for combo text — runs independently of the animation RAF.
-// m3Tick stops once animations are done; this keeps rendering until the text expires.
+// Always re-renders so the fade plays out even after m3Tick has stopped.
+// Double-rendering with m3Tick in the same frame is harmless (identical canvas state).
 function m3TickCombo(){
   const now=Date.now();
+  renderMatch3(now);
   if(!G.m3Combo||now>=G.m3Combo.till){
     G.m3Combo=null; m3ComboAF=null;
-    if(!m3AF) renderMatch3(); // clear the last frame
+    renderMatch3(); // one clean frame with no combo text
     return;
   }
-  if(!m3AF) renderMatch3(now); // skip if animation loop is already rendering
   m3ComboAF=requestAnimationFrame(m3TickCombo);
 }
 function m3Play(anims,done){m3StopRaf();G.anims=anims;G._m3done=done||null;m3AF=requestAnimationFrame(m3Tick);}
