@@ -125,43 +125,65 @@ body{
   display:none;
   flex-direction:column;
   align-items:center;
-  gap:12px;
+  gap:14px;
 }
+#memSetup{
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+}
+.mem-diff-bar{
+  display:flex;gap:6px;
+  background:rgba(255,255,255,0.35);
+  padding:5px;border-radius:26px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.1);
+}
+.mem-diff-btn{
+  padding:6px 15px;border-radius:20px;border:none;
+  background:transparent;cursor:pointer;
+  font-size:13px;color:#1a3a5c;font-weight:800;font-family:inherit;transition:all .18s;
+}
+.mem-diff-btn:hover{background:rgba(255,255,255,0.55)}
+.mem-diff-btn.active{background:#2e6da4;color:#fff;box-shadow:0 2px 8px rgba(30,80,160,.32)}
+#memCountdown{
+  font-size:80px;font-weight:900;
+  color:rgba(255,255,255,0.9);
+  text-shadow:0 4px 16px rgba(0,0,0,0.3);
+  line-height:1;
+  animation:cdPulse .9s ease-in-out infinite alternate;
+}
+@keyframes cdPulse{from{transform:scale(1);opacity:.8}to{transform:scale(1.15);opacity:1}}
 #memCardArea{
-  display:flex;flex-wrap:wrap;gap:10px;justify-content:center;
-  max-width:500px;
-  perspective:800px;
+  display:grid;
+  gap:9px;
 }
 .mem-card{
-  width:82px;height:82px;border-radius:14px;
+  border-radius:12px;
   cursor:pointer;position:relative;
   transition:transform .42s cubic-bezier(.4,0,.2,1);
   transform-style:preserve-3d;
-  perspective:600px;
+  perspective:500px;
 }
+.mem-card.preview{cursor:default}
 .mem-card.flipped{transform:rotateY(180deg)}
 .mem-card.matched{transform:rotateY(180deg);cursor:default}
 .card-front,.card-back{
-  position:absolute;inset:0;border-radius:14px;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  font-size:38px;backface-visibility:hidden;
+  position:absolute;inset:0;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  backface-visibility:hidden;
   -webkit-backface-visibility:hidden;
 }
 .card-front{
   background:linear-gradient(145deg,#3a7ec0,#5ba8e0);
-  box-shadow:0 4px 14px rgba(0,0,0,0.22);
-}
-.card-front::after{
-  content:'🎴';font-size:32px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.2);
+  font-size:28px;
 }
 .card-back{
   background:#fff;
-  box-shadow:0 4px 14px rgba(0,0,0,0.15);
+  box-shadow:0 4px 12px rgba(0,0,0,0.15);
   transform:rotateY(180deg);
 }
 .mem-card.matched .card-back{
-  background:linear-gradient(145deg,#d4f0c0,#b0e090);
-  box-shadow:0 0 14px rgba(80,200,80,0.4);
+  background:linear-gradient(145deg,#d4f0c0,#a8e888);
+  box-shadow:0 0 12px rgba(80,200,80,0.45);
 }
 
 /* ── Controls ── */
@@ -280,8 +302,20 @@ body{
 <div id="grid2048" style="display:none"></div>
 
 <!-- Memory Grid -->
-<div id="memGrid" style="display:none;flex-direction:column;align-items:center;gap:10px">
-  <div id="memCardArea" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:520px"></div>
+<div id="memGrid" style="display:none">
+  <!-- Setup screen -->
+  <div id="memSetup">
+    <div class="mem-diff-bar">
+      <button class="mem-diff-btn active" data-diff="easy">🐣 <span data-k="memEasy">Easy 4×4</span></button>
+      <button class="mem-diff-btn" data-diff="medium">🎯 <span data-k="memMed">Medium 6×4</span></button>
+      <button class="mem-diff-btn" data-diff="hard">💀 <span data-k="memHard">Hard 6×6</span></button>
+    </div>
+    <button class="ctrl-btn primary" onclick="startMem()">▶ <span data-k="startGame">Start Game</span></button>
+  </div>
+  <!-- Countdown (hidden until preview) -->
+  <div id="memCountdown" style="display:none">3</div>
+  <!-- Card grid -->
+  <div id="memCardArea"></div>
 </div>
 
 <!-- Controls -->
@@ -336,10 +370,12 @@ const TI={
     youWin:'You Win! 🎉', aiWin:'AI Wins! 🤖', p1Win:'Player 1 Wins! 🎉', p2Win:'Player 2 Wins! 🎉',
     draw:'It\'s a Draw! 🤝', gameOver:'Game Over',
     score:'Score', best:'Best', moves:'Moves', pairs:'Pairs',
+    memEasy:'Easy 4×4', memMed:'Medium 6×4', memHard:'Hard 6×6',
+    startGame:'Start Game', remember:'Remember!',
     tipTtt:'<b>Tic-Tac-Toe:</b> Get 3 in a row — horizontally, vertically, or diagonally. You are ❌, AI is ⭕.',
     tipC4:'<b>Connect 4:</b> Drop pieces into columns. First to connect 4 in a row wins! You are 🔴, AI/P2 is 🟡.',
     tip2048:'<b>2048:</b> Swipe or use arrow keys to slide tiles. Same numbers merge! Reach 2048 to win.',
-    tipMem:'<b>Memory:</b> Flip cards to find matching pairs. Remember where each emoji hides!',
+    tipMem:'<b>Memory:</b> Pick a difficulty, click Start. Cards show face-up for 3 seconds — memorize them! Then find all matching pairs.',
   },
   zh:{
     modeTtt:'井字棋', modeC4:'四子棋', mode2048:'2048', modeMem:'翻牌配对',
@@ -349,10 +385,12 @@ const TI={
     youWin:'你赢了！🎉', aiWin:'AI赢了！🤖', p1Win:'玩家1赢！🎉', p2Win:'玩家2赢！🎉',
     draw:'平局！🤝', gameOver:'游戏结束',
     score:'分数', best:'最高分', moves:'步数', pairs:'对数',
+    memEasy:'简单 4×4', memMed:'普通 6×4', memHard:'困难 6×6',
+    startGame:'开始游戏', remember:'记住了吗！',
     tipTtt:'<b>井字棋：</b>先在横、竖或斜方向连成3子获胜。你是❌，AI是⭕。',
     tipC4:'<b>四子棋：</b>向列中放棋子，先连成4子获胜！你是🔴，AI/P2是🟡。',
     tip2048:'<b>2048：</b>用方向键或滑动移动方块，相同数字合并！达到2048即胜。',
-    tipMem:'<b>翻牌配对：</b>翻开卡片找出相同的一对。记住每个表情藏在哪里！',
+    tipMem:'<b>翻牌配对：</b>选难度后点开始。卡片正面显示3秒——记住位置！然后找出所有配对。',
   }
 };
 let lang='en';
@@ -378,6 +416,8 @@ let aiLevel=3;
 let vsAI=true;
 let scores={ttt:[0,0],c4:[0,0],mem:[0,0]};
 let aiTimer=null;
+let memCountTimer=null;
+let memDiff='easy';
 
 const cvs=document.getElementById('cvs');
 const ctx=cvs.getContext('2d');
@@ -419,8 +459,10 @@ function setupMode(){
   } else if(mode==='mem'){
     mg.style.display='flex';
     mg.style.flexDirection='column';
+    mg.style.alignItems='center';
+    mg.style.gap='14px';
     oc.style.display='none'; ub.style.display='none';
-    sub.textContent=lang==='en'?'Find all matching pairs!':'找出所有配对！';
+    sub.textContent=lang==='en'?'Find all the matching pairs!':'找出所有配对！';
   }
   document.getElementById('mainTitle').textContent=
     mode==='ttt'?'Tic-Tac-Toe 🎮':
@@ -487,6 +529,7 @@ function updateTurnDisplay(){
 // ── New Game ───────────────────────────────────────────────────────────────────
 function newGame(){
   if(aiTimer){clearTimeout(aiTimer);aiTimer=null;}
+  if(memCountTimer){clearInterval(memCountTimer);memCountTimer=null;}
   closeModal();
   updateScoreBar();
   if(mode==='ttt') initTtt();
@@ -1041,29 +1084,101 @@ function setupSwipe(){
 }
 
 // ── Memory Match ─────────────────────────────────────────────────────────────
-const MEM_EMOJIS=['🐱','🐶','🐸','🦊','🐼','🐨','🦁','🐯','🐙','🦋','🌸','⭐','🍕','🎈','🌈','🦄'];
+const MEM_EMOJIS=[
+  '🐱','🐶','🐸','🦊','🐼','🐨','🦁','🐯',   // 8 – easy
+  '🐙','🦋','🌸','⭐',                          // 4 more – medium (12)
+  '🍕','🎈','🌈','🦄','🚀','🎸',               // 6 more – hard (18)
+];
+
+const MEM_DIFF={
+  easy:  {cols:4, rows:4, pairs:8 },
+  medium:{cols:6, rows:4, pairs:12},
+  hard:  {cols:6, rows:6, pairs:18},
+};
+// Wire up difficulty buttons
+document.querySelectorAll('.mem-diff-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    memDiff=btn.dataset.diff;
+    document.querySelectorAll('.mem-diff-btn').forEach(b=>b.classList.toggle('active',b===btn));
+  });
+});
 
 function initMem(){
-  G={cards:[],flipped:[],matched:new Set(),moves:0,pairs:0,lock:false};
-  // 8 pairs = 16 cards
-  const chosen=MEM_EMOJIS.slice(0,8);
-  const deck=[...chosen,...chosen].sort(()=>Math.random()-.5);
-  G.cards=deck.map((em,i)=>({id:i,emoji:em,face:false,matched:false}));
-  renderMem();
-  updateScoreBar();
+  if(memCountTimer){clearInterval(memCountTimer);memCountTimer=null;}
+  G={phase:'setup',cards:[],flipped:[],moves:0,pairs:0,lock:false};
   document.onkeydown=null;
+  // Show setup screen, clear card area
+  document.getElementById('memSetup').style.display='flex';
+  document.getElementById('memCountdown').style.display='none';
+  document.getElementById('memCardArea').innerHTML='';
+  updateScoreBar();
+}
+
+function startMem(){
+  if(memCountTimer){clearInterval(memCountTimer);memCountTimer=null;}
+  const cfg=MEM_DIFF[memDiff];
+  const chosen=MEM_EMOJIS.slice(0,cfg.pairs);
+  const deck=[...chosen,...chosen].sort(()=>Math.random()-.5);
+  G={
+    phase:'preview',
+    cards:deck.map((em,i)=>({id:i,emoji:em,face:true,matched:false})),
+    flipped:[],moves:0,pairs:0,lock:true,
+    totalPairs:cfg.pairs,
+  };
+  document.getElementById('memSetup').style.display='none';
+  updateScoreBar();
+  renderMem();
+
+  // Countdown 3→2→1→Go!
+  let count=3;
+  const cd=document.getElementById('memCountdown');
+  cd.textContent=count;
+  cd.style.display='block';
+
+  memCountTimer=setInterval(()=>{
+    count--;
+    if(count>0){
+      cd.textContent=count;
+    } else {
+      clearInterval(memCountTimer); memCountTimer=null;
+      cd.textContent=t('remember');
+      setTimeout(()=>{
+        cd.style.display='none';
+        G.cards.forEach(c=>c.face=false);
+        G.phase='playing';
+        G.lock=false;
+        renderMem();
+      },700);
+    }
+  },1000);
+}
+
+function memCardSize(){
+  const cfg=MEM_DIFF[memDiff];
+  const gap=9;
+  const maxW=Math.min(window.innerWidth-48, 580);
+  return Math.min(88, Math.floor((maxW - gap*(cfg.cols-1)) / cfg.cols));
 }
 
 function renderMem(){
+  const cfg=MEM_DIFF[memDiff];
   const area=document.getElementById('memCardArea');
+  const sz=memCardSize();
+  area.style.gridTemplateColumns=`repeat(${cfg.cols},${sz}px)`;
+  area.style.gridTemplateRows=`repeat(${cfg.rows},${sz}px)`;
+
   area.innerHTML='';
+  const isPreview=(G.phase==='preview');
   G.cards.forEach((card,i)=>{
     const el=document.createElement('div');
-    el.className='mem-card'+(card.face?' flipped':'')+(card.matched?' matched':'');
-    // card-front: blue back shown by default (CSS ::after adds 🎴 emoji)
-    // card-back: the emoji, shown when flipped
-    el.innerHTML=`<div class="card-front"></div><div class="card-back">${card.emoji}</div>`;
-    if(!card.matched) el.onclick=()=>memFlip(i);
+    el.style.width=sz+'px'; el.style.height=sz+'px';
+    const faceClass=card.face?' flipped':'';
+    const matchClass=card.matched?' matched':'';
+    const prevClass=isPreview?' preview':'';
+    el.className='mem-card'+faceClass+matchClass+prevClass;
+    const emojiSize=Math.round(sz*.42);
+    el.innerHTML=`<div class="card-front" style="font-size:${Math.round(sz*.32)}px">🎴</div><div class="card-back" style="font-size:${emojiSize}px">${card.emoji}</div>`;
+    if(G.phase==='playing'&&!card.matched) el.onclick=()=>memFlip(i);
     area.appendChild(el);
   });
   const pairs=document.getElementById('memPairs');
@@ -1073,7 +1188,7 @@ function renderMem(){
 }
 
 function memFlip(i){
-  if(G.lock||G.cards[i].face||G.cards[i].matched) return;
+  if(G.phase!=='playing'||G.lock||G.cards[i].face||G.cards[i].matched) return;
   G.cards[i].face=true;
   G.flipped.push(i);
   renderMem();
@@ -1084,14 +1199,14 @@ function memFlip(i){
     if(G.cards[a].emoji===G.cards[b].emoji){
       G.cards[a].matched=true; G.cards[b].matched=true;
       G.pairs++;
-      G.flipped=[];
-      G.lock=false;
+      G.flipped=[]; G.lock=false;
       renderMem();
-      if(G.pairs===8) setTimeout(()=>showWin('🎉','youWin','',`${t('moves')}: ${G.moves}`),400);
+      if(G.pairs===G.totalPairs)
+        setTimeout(()=>showWin('🎉','youWin','',`${t('moves')}: ${G.moves}`),400);
     } else {
       setTimeout(()=>{
         G.cards[a].face=false; G.cards[b].face=false;
-        G.flipped=[];G.lock=false;renderMem();
+        G.flipped=[]; G.lock=false; renderMem();
       },900);
     }
   }
