@@ -158,7 +158,7 @@ const TI={
     score:'Score', best:'Best', newGame:'New Game', again:'Play Again', tipClose:'Got it!',
     slow:'Slow', fast:'Fast', turbo:'Turbo',
     ready:'▶ Ready', playing:'Playing!', gameOver:'Game Over', youWin:'You Win! 🎉',
-    tipSnake:'<b>Snake:</b> Use arrow keys (or WASD / D-pad) to steer. Eat 🍎 to grow. Don\'t hit walls or yourself!',
+    tipSnake:'<b>Snake:</b> Arrow keys / WASD / D-pad to steer. Eat 🍎 to grow!<br><br>Power-ups appear and vanish (blink = almost gone!):<br>⚡ Speed Up &nbsp; 🐢 Slow Mo &nbsp; ✂️ Snip (shorter)<br>⭐ +5 pts &nbsp; 🛡️ Shield (pass wall once) &nbsp; 💣 Bomb (avoid!)',
     tipMatch3:'<b>Match 3:</b> Click a gem, then click an adjacent gem to swap. Match 3 or more in a row/column to clear them! Score combos for bonus points.',
     tipLian:'<b>Connect:</b> Click two matching tiles that can be connected by a path with at most 2 turns (through empty space). Clear the board to win!',
     tipMole:'<b>Whack-a-Mole:</b> Click the moles before they hide! 30 seconds — score as high as you can. Speed increases over time!',
@@ -168,7 +168,7 @@ const TI={
     score:'分数', best:'最高分', newGame:'新游戏', again:'再来一局', tipClose:'好的！',
     slow:'慢速', fast:'快速', turbo:'极速',
     ready:'▶ 准备', playing:'游戏中！', gameOver:'游戏结束', youWin:'你赢了！🎉',
-    tipSnake:'<b>贪吃蛇：</b>用方向键（或WASD/虚拟键）控制方向，吃🍎变长，不能碰墙或自身！',
+    tipSnake:'<b>贪吃蛇：</b>方向键/WASD/虚拟键控制，吃🍎长大！<br><br>道具会出现然后消失（闪烁=快没了）：<br>⚡加速 &nbsp; 🐢减速 &nbsp; ✂️变短 &nbsp; ⭐+5分 &nbsp; 🛡️护盾（穿墙一次） &nbsp; 💣炸弹（要躲开！）',
     tipMatch3:'<b>三消：</b>点击一颗宝石，再点击相邻宝石来交换。连成3个以上相同的即可消除！',
     tipLian:'<b>连连看：</b>点击两张相同的牌，中间能以不超过2次转弯连通就消除。清空所有牌即胜！',
     tipMole:'<b>打地鼠：</b>30秒内点击钻出来的地鼠！速度越来越快，看能得多少分！',
@@ -270,17 +270,42 @@ function showTip(){
 function closeTip(){document.getElementById('tipOverlay').classList.add('hidden');}
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SNAKE
+// SNAKE  (Power-up edition)
 // ═══════════════════════════════════════════════════════════════════════════════
 const SN_COLS=20, SN_ROWS=20, SN_CELL=26;
 const SN_W=SN_COLS*SN_CELL, SN_H=SN_ROWS*SN_CELL;
-let snakeSpeedMs=180;
+let snakeBaseSpeed=180; // user-chosen base (ms per step)
+
+// Power-up definitions
+const POWERUPS=[
+  {type:'fast',  emoji:'⚡', glow:'#ffd43b', label:'Speed Up!', timed:true,  secs:4},
+  {type:'slow',  emoji:'🐢', glow:'#74c0fc', label:'Slow Mo!',  timed:true,  secs:5},
+  {type:'short', emoji:'✂️', glow:'#f783ac', label:'Snip!',     timed:false, secs:0},
+  {type:'star',  emoji:'⭐', glow:'#ffe566', label:'+5 Bonus!', timed:false, secs:0},
+  {type:'shield',emoji:'🛡️', glow:'#63e6be', label:'Shield!',  timed:false, secs:0},
+  {type:'bomb',  emoji:'💣', glow:'#ff8787', label:'Boom! -2',  timed:false, secs:0, bad:true},
+];
+const PU_LIFETIME_MIN=6000, PU_LIFETIME_MAX=10000;
+const PU_BLINK_BELOW=2500; // ms remaining when blink starts
+const SPAWN_STEPS_MIN=22, SPAWN_STEPS_MAX=40;
 
 function setSnakeSpeed(btn){
   document.querySelectorAll('.speed-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  snakeSpeedMs=parseInt(btn.dataset.spd);
-  if(G.started&&!G.over){stopLoop();gameLoop=setInterval(snakeStep,snakeSpeedMs);}
+  snakeBaseSpeed=parseInt(btn.dataset.spd);
+  if(G.started&&!G.over) resetSnakeLoop();
+}
+
+function effectiveSpeed(){
+  let s=snakeBaseSpeed;
+  if(G.eff.fast) s=Math.max(45, Math.round(s*0.45));
+  if(G.eff.slow) s=Math.min(480, Math.round(s*2.2));
+  return s;
+}
+
+function resetSnakeLoop(){
+  stopLoop();
+  if(G.started&&!G.over) gameLoop=setInterval(snakeStep,effectiveSpeed());
 }
 
 function initSnake(){
@@ -289,7 +314,12 @@ function initSnake(){
   G={
     snake:[{r:10,c:10},{r:10,c:9},{r:10,c:8}],
     dir:{dc:1,dr:0}, next:{dc:1,dr:0},
-    food:null, score:0, over:false, started:false
+    food:null, score:0, over:false, started:false,
+    items:[],           // [{type,r,c,timer,maxTimer}]
+    eff:{},             // active timed effects: {fast:msLeft, slow:msLeft}
+    shield:false,       // one-use wall pass
+    spawnIn:SPAWN_STEPS_MIN, stepCount:0,
+    feedback:null,      // {txt, till(ms)}
   };
   G.food=snakeNewFood();
   updateScore(0); updatePill(t('ready'));
@@ -298,18 +328,24 @@ function initSnake(){
 
 function snakeStart(){
   if(G.started||G.over) return;
-  G.started=true;
-  cvs.onclick=null;
+  G.started=true; cvs.onclick=null;
   updatePill(t('playing'),'pulse');
-  gameLoop=setInterval(snakeStep,snakeSpeedMs);
+  gameLoop=setInterval(snakeStep,effectiveSpeed());
 }
 
 function snakeNewFood(){
-  const occupied=new Set(G.snake.map(s=>s.r*SN_COLS+s.c));
+  const occ=snakeOccupied();
   let r,c;
   do{r=Math.floor(Math.random()*SN_ROWS);c=Math.floor(Math.random()*SN_COLS);}
-  while(occupied.has(r*SN_COLS+c));
+  while(occ.has(r*SN_COLS+c));
   return{r,c};
+}
+
+function snakeOccupied(){
+  const s=new Set(G.snake.map(s=>s.r*SN_COLS+s.c));
+  if(G.food) s.add(G.food.r*SN_COLS+G.food.c);
+  (G.items||[]).forEach(it=>s.add(it.r*SN_COLS+it.c));
+  return s;
 }
 
 function onSnakeKey(e){
@@ -330,86 +366,250 @@ function snakeDir(dc,dr){
 }
 
 function snakeStep(){
+  const stepMs=effectiveSpeed();
+
+  // ── tick timed effects ──
+  let speedChanged=false;
+  for(const k of Object.keys(G.eff)){
+    G.eff[k]-=stepMs;
+    if(G.eff[k]<=0){delete G.eff[k];speedChanged=true;}
+  }
+  if(speedChanged) resetSnakeLoop();
+
+  // ── tick item lifetimes ──
+  G.items=G.items.filter(it=>{it.timer-=stepMs;return it.timer>0;});
+
+  // ── spawn new item ──
+  G.stepCount++;
+  if(G.stepCount>=G.spawnIn){
+    G.stepCount=0;
+    G.spawnIn=SPAWN_STEPS_MIN+Math.floor(Math.random()*(SPAWN_STEPS_MAX-SPAWN_STEPS_MIN));
+    if(G.items.length<2) spawnPowerup();
+  }
+
+  // ── move head ──
   G.dir=G.next;
   const head=G.snake[0];
-  const nr=head.r+G.dir.dr, nc=head.c+G.dir.dc;
-  if(nr<0||nr>=SN_ROWS||nc<0||nc>=SN_COLS||G.snake.some(s=>s.r===nr&&s.c===nc)){
-    G.over=true; stopLoop();
-    updatePill(t('gameOver'),'over');
-    renderSnake();
-    setTimeout(()=>showWin('😵',t('gameOver'),'lose',`${t('score')}: ${G.score}`),400);
-    return;
+  let nr=head.r+G.dir.dr, nc=head.c+G.dir.dc;
+
+  // wall collision → shield wraps once
+  if(nr<0||nr>=SN_ROWS||nc<0||nc>=SN_COLS){
+    if(G.shield){
+      G.shield=false;
+      nr=((nr%SN_ROWS)+SN_ROWS)%SN_ROWS;
+      nc=((nc%SN_COLS)+SN_COLS)%SN_COLS;
+      snakeFeedback('🛡️ Wall pass!');
+    } else {
+      return snakeDie();
+    }
   }
+  // self collision
+  if(G.snake.some(s=>s.r===nr&&s.c===nc)) return snakeDie();
+
   G.snake.unshift({r:nr,c:nc});
+
+  // ── eat food ──
   if(nr===G.food.r&&nc===G.food.c){
     G.score++;
     updateScore(G.score);
     G.food=snakeNewFood();
-    // speed up every 5 points
-    if(G.score%5===0&&snakeSpeedMs>60){
-      stopLoop(); snakeSpeedMs=Math.max(60,snakeSpeedMs-15);
-      gameLoop=setInterval(snakeStep,snakeSpeedMs);
-    }
+    if(G.score%5===0){snakeBaseSpeed=Math.max(60,snakeBaseSpeed-12);resetSnakeLoop();}
   } else {
     G.snake.pop();
   }
+
+  // ── eat power-up ──
+  const hitIdx=G.items.findIndex(it=>it.r===nr&&it.c===nc);
+  if(hitIdx>=0){
+    const it=G.items.splice(hitIdx,1)[0];
+    applyPowerup(it.type);
+  }
+
   renderSnake();
 }
 
+function snakeDie(){
+  G.over=true; stopLoop();
+  updatePill(t('gameOver'),'over');
+  renderSnake();
+  setTimeout(()=>showWin('😵',t('gameOver'),'lose',`${t('score')}: ${G.score}`),400);
+}
+
+function spawnPowerup(){
+  const occ=snakeOccupied();
+  const empty=[];
+  for(let r=2;r<SN_ROWS-2;r++) for(let c=2;c<SN_COLS-2;c++) if(!occ.has(r*SN_COLS+c)) empty.push([r,c]);
+  if(!empty.length) return;
+  const [r,c]=empty[Math.floor(Math.random()*empty.length)];
+  // weighted pool: bomb is rare (1/8)
+  const pool=[...POWERUPS,...POWERUPS,...POWERUPS,POWERUPS[5]]; // bomb appears ~3/21
+  // actually: pool of types weighted
+  const weights=[3,3,3,3,3,1]; // fast/slow/short/star/shield : bomb = 15:1 → simpler:
+  const typePool=[];
+  POWERUPS.forEach((pu,i)=>{ for(let j=0;j<(pu.bad?1:3);j++) typePool.push(pu);});
+  const pu=typePool[Math.floor(Math.random()*typePool.length)];
+  const maxTimer=PU_LIFETIME_MIN+Math.floor(Math.random()*(PU_LIFETIME_MAX-PU_LIFETIME_MIN));
+  G.items.push({type:pu.type,r,c,timer:maxTimer,maxTimer});
+}
+
+function applyPowerup(type){
+  const pu=POWERUPS.find(p=>p.type===type);
+  switch(type){
+    case 'fast':
+      G.eff.fast=(pu.secs*1000); resetSnakeLoop();
+      snakeFeedback('⚡ Speed Up!');break;
+    case 'slow':
+      G.eff.slow=(pu.secs*1000); resetSnakeLoop();
+      snakeFeedback('🐢 Slow Mo!');break;
+    case 'short':
+      G.snake=G.snake.slice(0,Math.max(2,Math.floor(G.snake.length/2)));
+      G.score+=2; updateScore(G.score);
+      snakeFeedback('✂️ Snip! +2');break;
+    case 'star':
+      G.score+=5; updateScore(G.score);
+      snakeFeedback('⭐ +5 Bonus!');break;
+    case 'shield':
+      G.shield=true;
+      snakeFeedback('🛡️ Shield ready!');break;
+    case 'bomb':
+      G.snake=G.snake.slice(0,Math.max(2,G.snake.length-3));
+      G.score=Math.max(0,G.score-2); updateScore(G.score);
+      snakeFeedback('💣 Boom! -2');break;
+  }
+}
+
+function snakeFeedback(txt){
+  G.feedback={txt, till:Date.now()+1800};
+}
+
 const FOOD_EMOJIS=['🍎','🍊','🍋','🍇','🍓','🍉'];
+const EMOJI_FONT=`"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",serif`;
 function renderSnake(){
   ctx.fillStyle='#1a3a1a'; ctx.fillRect(0,0,SN_W,SN_H);
+
   // grid dots
   ctx.fillStyle='rgba(255,255,255,0.06)';
   for(let r=0;r<SN_ROWS;r++) for(let c=0;c<SN_COLS;c++){
     ctx.fillRect(c*SN_CELL+SN_CELL/2-1,r*SN_CELL+SN_CELL/2-1,2,2);
   }
-  // food — draw glow circle first so it pops on dark bg
+
+  // ── food ──
   const fi=G.score%FOOD_EMOJIS.length;
   const fx=G.food.c*SN_CELL+SN_CELL/2, fy=G.food.r*SN_CELL+SN_CELL/2;
-  ctx.fillStyle='rgba(255,230,80,0.28)';
-  ctx.beginPath();ctx.arc(fx,fy,SN_CELL*.48,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,0.9)'; // reset so emoji is visible
-  ctx.font=`${SN_CELL+2}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",serif`;
+  ctx.fillStyle='rgba(255,230,80,0.3)';
+  ctx.beginPath();ctx.arc(fx,fy,SN_CELL*.46,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.95)';
+  ctx.font=`${SN_CELL+2}px ${EMOJI_FONT}`;
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText(FOOD_EMOJIS[fi],fx,fy+1);
-  // body segments
+
+  // ── power-up items ──
+  const now=Date.now();
+  G.items.forEach(it=>{
+    const pct=it.timer/it.maxTimer;
+    const blinking=it.timer<PU_BLINK_BELOW;
+    // blink rate: 400ms cycle when first blinking, 200ms when nearly gone
+    const blinkRate=it.timer<1200?200:400;
+    if(blinking&&(now%blinkRate)<blinkRate*.45) return; // skip = invisible frame
+    const pu=POWERUPS.find(p=>p.type===it.type);
+    const ix=it.c*SN_CELL+SN_CELL/2, iy=it.r*SN_CELL+SN_CELL/2;
+    // glow bg
+    const alpha=blinking?0.45:0.7;
+    ctx.save();
+    ctx.globalAlpha=alpha;
+    ctx.fillStyle=pu.glow;
+    ctx.beginPath();ctx.arc(ix,iy,SN_CELL*.46,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;
+    ctx.restore();
+    // emoji
+    ctx.fillStyle='rgba(255,255,255,0.95)';
+    ctx.font=`${SN_CELL+2}px ${EMOJI_FONT}`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(pu.emoji,ix,iy+1);
+    // timer ring
+    ctx.strokeStyle=pu.glow; ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.arc(ix,iy,SN_CELL*.46,-Math.PI/2,-Math.PI/2+Math.PI*2*pct);ctx.stroke();
+  });
+
+  // ── snake body ──
+  const hasShield=G.shield;
   G.snake.forEach((seg,i)=>{
     const x=seg.c*SN_CELL, y=seg.r*SN_CELL;
-    const r2=SN_CELL/2-1;
     if(i===0){
-      // head: kawaii face
-      ctx.fillStyle='#4ecc6a';
-      roundRect(ctx,x+1,y+1,SN_CELL-2,SN_CELL-2,5);
-      ctx.fill();
-      // eyes
+      // head colour changes with active effects
+      let headColor='#4ecc6a';
+      if(G.eff.fast) headColor='#ffd43b';
+      else if(G.eff.slow) headColor='#74c0fc';
+      ctx.fillStyle=headColor;
+      roundRect(ctx,x+1,y+1,SN_CELL-2,SN_CELL-2,5); ctx.fill();
+      if(hasShield){
+        ctx.strokeStyle='#63e6be'; ctx.lineWidth=2;
+        roundRect(ctx,x+1,y+1,SN_CELL-2,SN_CELL-2,5); ctx.stroke();
+      }
+      const ex=x+SN_CELL*.28, ex2=x+SN_CELL*.72, ey=y+SN_CELL*.38, er=SN_CELL*.1;
       ctx.fillStyle='#fff';
-      const ex=x+SN_CELL*.28, ex2=x+SN_CELL*.72, ey=y+SN_CELL*.38;
-      const er=SN_CELL*.1;
       ctx.beginPath();ctx.arc(ex,ey,er,0,Math.PI*2);ctx.fill();
       ctx.beginPath();ctx.arc(ex2,ey,er,0,Math.PI*2);ctx.fill();
-      // pupil
       ctx.fillStyle='#111';
       ctx.beginPath();ctx.arc(ex+er*.2,ey+er*.2,er*.55,0,Math.PI*2);ctx.fill();
       ctx.beginPath();ctx.arc(ex2+er*.2,ey+er*.2,er*.55,0,Math.PI*2);ctx.fill();
-      // mouth smile
       ctx.strokeStyle='#1a5a2a'; ctx.lineWidth=1.5; ctx.lineCap='round';
       ctx.beginPath();ctx.arc(x+SN_CELL/2,y+SN_CELL*.62,SN_CELL*.15,0,Math.PI);ctx.stroke();
     } else {
-      // body
       const t2=i/G.snake.length;
-      ctx.fillStyle=`hsl(${130-t2*20},${70-t2*20}%,${40+t2*10}%)`;
-      roundRect(ctx,x+2,y+2,SN_CELL-4,SN_CELL-4,4);
-      ctx.fill();
+      let hue=130-t2*20;
+      if(G.eff.fast) hue=45;
+      else if(G.eff.slow) hue=210;
+      ctx.fillStyle=`hsl(${hue},${70-t2*20}%,${40+t2*10}%)`;
+      roundRect(ctx,x+2,y+2,SN_CELL-4,SN_CELL-4,4); ctx.fill();
     }
   });
-  // start hint
-  if(!G.started&&!G.over){
-    ctx.fillStyle='rgba(0,0,0,0.5)';
-    ctx.fillRect(0,SN_H/2-28,SN_W,56);
-    ctx.fillStyle='#fff'; ctx.font='bold 16px Nunito,sans-serif';
+
+  // ── active effects HUD (top-left) ──
+  let hudX=4;
+  Object.entries(G.eff).forEach(([k,ms])=>{
+    const pu=POWERUPS.find(p=>p.type===k);
+    const pct=ms/(pu.secs*1000);
+    ctx.fillStyle='rgba(0,0,0,0.4)';
+    roundRect(ctx,hudX,4,30,34,6); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.9)';
+    ctx.font=`18px ${EMOJI_FONT}`;
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText(pu.emoji,hudX+15,6);
+    // bar
+    ctx.fillStyle='#333'; ctx.fillRect(hudX+2,28,26,4);
+    ctx.fillStyle=pct>0.5?'#4ecc6a':'#ffa94d';
+    ctx.fillRect(hudX+2,28,26*pct,4);
+    hudX+=34;
+  });
+  if(G.shield){
+    ctx.fillStyle='rgba(0,0,0,0.4)';
+    roundRect(ctx,hudX,4,30,34,6); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.9)';
+    ctx.font=`18px ${EMOJI_FONT}`;
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText('🛡️',hudX+15,6);
+    hudX+=34;
+  }
+
+  // ── feedback text ──
+  if(G.feedback&&G.feedback.till>now){
+    const alpha=Math.min(1,(G.feedback.till-now)/400);
+    ctx.globalAlpha=alpha;
+    ctx.fillStyle='#fff';
+    ctx.font='bold 18px Nunito,sans-serif';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(lang==='en'?'Press any arrow key or tap to start':'按方向键或点击开始',SN_W/2,SN_H/2);
+    ctx.fillText(G.feedback.txt,SN_W/2,SN_H*.22);
+    ctx.globalAlpha=1;
+  }
+
+  // ── start hint ──
+  if(!G.started&&!G.over){
+    ctx.fillStyle='rgba(0,0,0,0.52)';
+    ctx.fillRect(0,SN_H/2-30,SN_W,60);
+    ctx.fillStyle='#fff'; ctx.font='bold 15px Nunito,sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(lang==='en'?'Press arrow key or tap to start':'按方向键或点击开始',SN_W/2,SN_H/2);
   }
 }
 
