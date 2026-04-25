@@ -433,14 +433,6 @@ function snakeStep(){
   // ── tick item lifetimes ──
   G.items=G.items.filter(it=>{it.timer-=stepMs;return it.timer>0;});
 
-  // ── spawn new item ──
-  G.stepCount++;
-  if(G.stepCount>=G.spawnIn){
-    G.stepCount=0;
-    G.spawnIn=SPAWN_STEPS_MIN+Math.floor(Math.random()*(SPAWN_STEPS_MAX-SPAWN_STEPS_MIN));
-    if(G.items.length<2) spawnPowerup();
-  }
-
   // ── move head ──
   G.dir=G.next;
   const head=G.snake[0];
@@ -479,6 +471,14 @@ function snakeStep(){
     applyPowerup(it.type);
   }
 
+  // ── spawn new item (AFTER move+eat so position is current) ──
+  G.stepCount++;
+  if(G.stepCount>=G.spawnIn){
+    G.stepCount=0;
+    G.spawnIn=SPAWN_STEPS_MIN+Math.floor(Math.random()*(SPAWN_STEPS_MAX-SPAWN_STEPS_MIN));
+    if(G.items.length<2) spawnPowerup();
+  }
+
   renderSnake();
 }
 
@@ -504,13 +504,13 @@ function spawnPowerup(){
   const pu=typePool[Math.floor(Math.random()*typePool.length)];
   const maxTimer=PU_LIFETIME_MIN+Math.floor(Math.random()*(PU_LIFETIME_MAX-PU_LIFETIME_MIN));
   G.items.push({type:pu.type,r,c,timer:maxTimer,maxTimer});
-  // notify player a new item appeared
-  const desc={fast:'Speed Up! 4s',slow:'Slow Mo! 5s',short:'Snip! shorter',star:'+5 Bonus!',shield:'Shield! wall pass',bomb:'💣 Bomb! Avoid!'};
-  snakeSpawnNotice(pu.emoji+' '+desc[pu.type]);
+  // notify player a new item appeared on board
+  const names={fast:'Speed Up',slow:'Slow Mo',short:'Snip',star:'+5 Star',shield:'Shield',bomb:'Bomb!'};
+  snakeSpawnNotice(pu.emoji+' '+names[pu.type],!!pu.bad);
 }
 
-function snakeSpawnNotice(txt){
-  G.spawnNotice={txt,till:Date.now()+2200};
+function snakeSpawnNotice(txt,bad){
+  G.spawnNotice={txt,bad,till:Date.now()+2400};
 }
 
 function applyPowerup(type){
@@ -653,29 +653,42 @@ function renderSnake(){
     hudX+=34;
   }
 
-  // ── collected item feedback (centre, fades out) ──
+  // ── collected item feedback (top-centre, bright white, fades) ──
   if(G.feedback&&G.feedback.till>now){
     const alpha=Math.min(1,(G.feedback.till-now)/400);
+    ctx.save();
     ctx.globalAlpha=alpha;
+    // pill background
+    ctx.fillStyle='rgba(255,255,255,0.22)';
+    const fw=ctx.measureText(G.feedback.txt).width+24;
+    roundRect(ctx,SN_W/2-fw/2,SN_H*.14-14,fw,28,14);ctx.fill();
     ctx.fillStyle='#fff';
-    ctx.font='bold 18px Nunito,sans-serif';
+    ctx.font='bold 17px Nunito,sans-serif';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(G.feedback.txt,SN_W/2,SN_H*.22);
-    ctx.globalAlpha=1;
+    ctx.fillText(G.feedback.txt,SN_W/2,SN_H*.14);
+    ctx.restore();
   }
 
-  // ── spawn notice (bottom strip, slides in) ──
+  // ── spawn notice (bottom strip, amber — "item appeared on board") ──
   if(G.spawnNotice&&G.spawnNotice.till>now){
     const left=G.spawnNotice.till-now;
-    const alpha=Math.min(1,left/350);
-    ctx.globalAlpha=alpha*0.92;
-    ctx.fillStyle='rgba(10,30,10,0.7)';
-    ctx.fillRect(0,SN_H-28,SN_W,28);
+    const alpha=Math.min(1,left/350)*0.93;
+    ctx.save();
+    ctx.globalAlpha=alpha;
+    // amber strip for good items, red-tinted for bomb
+    ctx.fillStyle=G.spawnNotice.bad?'rgba(120,20,20,0.82)':'rgba(120,80,0,0.82)';
+    ctx.fillRect(0,SN_H-30,SN_W,30);
+    // label: "On board →"
+    ctx.fillStyle=G.spawnNotice.bad?'#ffaaaa':'#ffe066';
+    ctx.font='bold 11px Nunito,sans-serif';
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText('ON BOARD →',6,SN_H-15);
+    // item text
     ctx.fillStyle='#fff';
-    ctx.font='bold 13px Nunito,sans-serif';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('✨ '+G.spawnNotice.txt,SN_W/2,SN_H-14);
-    ctx.globalAlpha=1;
+    ctx.font='bold 14px Nunito,sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText(G.spawnNotice.txt,SN_W/2+18,SN_H-15);
+    ctx.restore();
   }
 
   // ── start hint ──
