@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bean Arcade 🕹️</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:#5a9e6a;
+  background-image:radial-gradient(circle,rgba(255,255,255,0.13) 1.5px,transparent 1.5px);
+  background-size:22px 22px;
+  font-family:'Nunito','PingFang SC','Microsoft YaHei',sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  padding:12px 8px 28px;gap:9px;user-select:none;
+}
+.mode-bar{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;background:rgba(255,255,255,0.38);padding:5px;border-radius:30px;box-shadow:0 3px 14px rgba(0,0,0,0.13)}
+.mode-btn{padding:8px 18px;border-radius:24px;border:none;background:transparent;cursor:pointer;font-size:14px;font-weight:800;font-family:inherit;color:#1a4a2a;transition:all .2s;white-space:nowrap}
+.mode-btn:hover{background:rgba(255,255,255,0.5)}
+.mode-btn.active{background:linear-gradient(135deg,#1a4a2a,#2e7a44);color:#fff;box-shadow:0 2px 10px rgba(20,70,30,.35)}
+.header{display:flex;align-items:center;gap:12px}
+.header-group{display:flex;flex-direction:column;align-items:flex-start}
+.title{font-size:22px;font-weight:900;background:linear-gradient(135deg,#1a4a2a,#2e7a44);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.title-sub{font-size:11px;color:rgba(20,70,30,.55);font-weight:600;margin-top:-1px}
+.header-btns{display:flex;gap:7px;align-items:center}
+.header-btn{padding:5px 13px;border-radius:20px;border:2px solid rgba(255,255,255,0.7);background:rgba(255,255,255,0.55);cursor:pointer;font-size:13px;color:#1a4a2a;font-weight:700;font-family:inherit;box-shadow:0 2px 6px rgba(0,0,0,0.1);transition:all .15s}
+.header-btn:hover{background:rgba(255,255,255,0.8);transform:translateY(-1px)}
+.nav-link{font-size:12px;color:rgba(255,255,255,0.85);font-weight:700;text-decoration:none;padding:4px 12px;border-radius:14px;background:rgba(255,255,255,0.2);transition:all .15s}
+.nav-link:hover{background:rgba(255,255,255,0.35)}
+.score-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;background:rgba(255,255,255,0.92);padding:10px 22px;border-radius:36px;box-shadow:0 3px 14px rgba(0,0,0,0.13)}
+.score-item{display:flex;align-items:center;gap:8px}
+.score-lbl{color:#4a8a5a;font-size:13px;font-weight:700}
+.score-val{font-size:26px;font-weight:900;color:#1a4a2a;min-width:36px;text-align:center;line-height:1}
+.turn-pill{padding:5px 14px;border-radius:20px;border:2.5px solid #a0d0a8;background:#f0fff4;font-size:13px;color:#1a5a2a;font-weight:700;white-space:nowrap;transition:all .2s}
+.turn-pill.over{border-color:#e04040;background:#fff0f0;color:#c03030}
+.turn-pill.pulse{animation:pulse .7s ease-in-out infinite alternate}
+@keyframes pulse{from{opacity:.7}to{opacity:1}}
+.board-wrap{border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.3),0 2px 6px rgba(0,0,0,0.12);border:3px solid rgba(255,255,255,0.28)}
+#cvs{display:block;cursor:pointer}
+.controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center}
+.ctrl-row{display:flex;gap:7px;flex-wrap:wrap;justify-content:center}
+.ctrl-btn{padding:8px 17px;border-radius:22px;border:2px solid rgba(255,255,255,0.7);background:rgba(255,255,255,0.75);cursor:pointer;font-size:13px;color:#1a4a2a;font-weight:700;font-family:inherit;box-shadow:0 2px 6px rgba(0,0,0,0.09);transition:all .15s}
+.ctrl-btn:hover:not(:disabled){background:rgba(255,255,255,0.95);transform:translateY(-1px)}
+.ctrl-btn:disabled{opacity:.35;cursor:not-allowed}
+.ctrl-btn.primary{background:linear-gradient(135deg,#1a4a2a,#2e7a44);color:#fff;border-color:transparent;box-shadow:0 3px 10px rgba(20,70,30,.35)}
+.ctrl-btn.primary:hover{background:linear-gradient(135deg,#2a6a3a,#3e9a54);transform:translateY(-1px)}
+/* Snake direction pad */
+.dpad{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(2,44px);gap:4px}
+.dpad-btn{width:44px;height:44px;border-radius:12px;border:2px solid rgba(255,255,255,0.7);background:rgba(255,255,255,0.75);cursor:pointer;font-size:20px;font-family:inherit;color:#1a4a2a;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.1);transition:all .12s}
+.dpad-btn:active{transform:scale(.92);background:rgba(255,255,255,0.95)}
+.dpad-btn.hidden{visibility:hidden}
+/* overlay */
+.overlay{position:fixed;inset:0;background:rgba(20,70,30,.28);display:flex;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(3px)}
+.overlay.hidden{display:none}
+.modal{background:#fff;border-radius:28px;padding:32px 38px;text-align:center;box-shadow:0 12px 56px rgba(0,0,0,.28);min-width:280px}
+.modal-emoji{font-size:54px;margin-bottom:8px;animation:bounce .5s ease infinite alternate}
+@keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-8px)}}
+.modal-title{font-size:24px;font-weight:900;color:#2a8a40;margin-bottom:6px}
+.modal-title.lose{color:#c03030}
+.modal-sub{font-size:14px;color:#8aaa70;font-weight:700;margin-bottom:22px}
+.modal-btns{display:flex;gap:10px;justify-content:center}
+.modal-btn{padding:10px 22px;border-radius:22px;border:2px solid #c0dcc0;background:#fff;cursor:pointer;font-size:15px;font-family:inherit;font-weight:700;color:#1a4a2a;transition:all .15s}
+.modal-btn:hover{background:#f0fff4;transform:translateY(-1px)}
+.modal-btn.primary{background:linear-gradient(135deg,#1a4a2a,#2e7a44);color:#fff;border-color:transparent;box-shadow:0 3px 12px rgba(20,70,30,.3)}
+.tip-overlay{position:fixed;inset:0;background:rgba(20,70,30,.25);display:flex;align-items:center;justify-content:center;z-index:300;backdrop-filter:blur(3px)}
+.tip-overlay.hidden{display:none}
+.tip-box{background:#fff;border-radius:22px;padding:24px 28px;max-width:320px;text-align:left;line-height:1.75;font-size:14px;color:#1a4a2a;font-family:inherit;font-weight:600;box-shadow:0 10px 44px rgba(0,0,0,.2)}
+.tip-box h3{margin-bottom:10px;font-size:17px;color:#1a4a2a;font-weight:900}
+.tip-close-btn{display:block;margin-top:14px;padding:10px;text-align:center;background:linear-gradient(135deg,#1a4a2a,#2e7a44);color:#fff;border-radius:16px;border:none;cursor:pointer;width:100%;font-size:14px;font-family:inherit;font-weight:700}
+/* Speed selector */
+.speed-bar{display:flex;gap:4px;background:rgba(255,255,255,0.35);padding:4px;border-radius:24px;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+.speed-btn{padding:5px 12px;border-radius:20px;border:none;background:transparent;cursor:pointer;font-size:12px;color:#1a4a2a;font-weight:800;font-family:inherit;transition:all .18s}
+.speed-btn:hover{background:rgba(255,255,255,0.5)}
+.speed-btn.active{background:#2e7a44;color:#fff;box-shadow:0 2px 8px rgba(30,100,50,.32)}
+</style>
+</head>
+<body>
+
+<div class="mode-bar">
+  <button class="mode-btn active" data-mode="snake">🐍 <span data-k="modeSnake">Snake</span></button>
+  <button class="mode-btn" data-mode="match3">💎 <span data-k="modeMatch3">Match 3</span></button>
+  <button class="mode-btn" data-mode="lian">🀄 <span data-k="modeLian">Connect</span></button>
+  <button class="mode-btn" data-mode="mole">🐹 <span data-k="modeMole">Whack-a-Mole</span></button>
+</div>
+
+<div class="header">
+  <div class="header-group">
+    <h1 class="title" id="mainTitle">Bean Arcade 🕹️</h1>
+    <div class="title-sub" id="mainSub">Classic fun games!</div>
+  </div>
+  <div class="header-btns">
+    <button class="header-btn" id="langBtn" onclick="toggleLang()">中</button>
+    <button class="header-btn" onclick="showTip()">?</button>
+    <a class="nav-link" href="kids.html">🎮 Kids</a>
+    <a class="nav-link" href="index.html">🎴 Board</a>
+  </div>
+</div>
+
+<div class="score-bar" id="scoreBar">
+  <div class="score-item"><div class="score-lbl" data-k="score">Score</div><div class="score-val" id="scoreVal">0</div></div>
+  <div class="score-item"><div class="score-lbl" data-k="best">Best</div><div class="score-val" id="bestVal">0</div></div>
+  <div class="turn-pill" id="turnPill">▶ Ready</div>
+</div>
+
+<div class="board-wrap" id="boardWrap">
+  <canvas id="cvs"></canvas>
+</div>
+
+<div class="controls" id="controls">
+  <div class="ctrl-row" id="snakeSpeed" style="display:none">
+    <div class="speed-bar">
+      <button class="speed-btn active" data-spd="180" onclick="setSnakeSpeed(this)">🐢 <span data-k="slow">Slow</span></button>
+      <button class="speed-btn" data-spd="120" onclick="setSnakeSpeed(this)">🐇 <span data-k="fast">Fast</span></button>
+      <button class="speed-btn" data-spd="70" onclick="setSnakeSpeed(this)">⚡ <span data-k="turbo">Turbo</span></button>
+    </div>
+  </div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn primary" onclick="newGame()">✨ <span data-k="newGame">New Game</span></button>
+  </div>
+  <!-- D-pad for snake on mobile -->
+  <div class="dpad" id="dpad" style="display:none">
+    <div class="dpad-btn hidden"></div>
+    <button class="dpad-btn" onclick="snakeDir(0,-1)">▲</button>
+    <div class="dpad-btn hidden"></div>
+    <button class="dpad-btn" onclick="snakeDir(-1,0)">◀</button>
+    <button class="dpad-btn" onclick="snakeDir(0,1)">▼</button>
+    <button class="dpad-btn" onclick="snakeDir(1,0)">▶</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="winOverlay">
+  <div class="modal">
+    <div class="modal-emoji" id="winEmoji">🎉</div>
+    <div class="modal-title" id="winTitle">You Win!</div>
+    <div class="modal-sub" id="winSub"></div>
+    <div class="modal-btns">
+      <button class="modal-btn primary" onclick="newGame();closeModal()">✨ <span data-k="again">Play Again</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="tip-overlay hidden" id="tipOverlay">
+  <div class="tip-box">
+    <h3 id="tipTitle">How to Play</h3>
+    <div id="tipBody"></div>
+    <button class="tip-close-btn" onclick="closeTip()"><span data-k="tipClose">Got it!</span></button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── Translations ──────────────────────────────────────────────────────────────
+const TI={
+  en:{
+    modeSnake:'Snake', modeMatch3:'Match 3', modeLian:'Connect', modeMole:'Whack-a-Mole',
+    score:'Score', best:'Best', newGame:'New Game', again:'Play Again', tipClose:'Got it!',
+    slow:'Slow', fast:'Fast', turbo:'Turbo',
+    ready:'▶ Ready', playing:'Playing!', gameOver:'Game Over', youWin:'You Win! 🎉',
+    tipSnake:'<b>Snake:</b> Use arrow keys (or WASD / D-pad) to steer. Eat 🍎 to grow. Don\'t hit walls or yourself!',
+    tipMatch3:'<b>Match 3:</b> Click a gem, then click an adjacent gem to swap. Match 3 or more in a row/column to clear them! Score combos for bonus points.',
+    tipLian:'<b>Connect:</b> Click two matching tiles that can be connected by a path with at most 2 turns (through empty space). Clear the board to win!',
+    tipMole:'<b>Whack-a-Mole:</b> Click the moles before they hide! 30 seconds — score as high as you can. Speed increases over time!',
+  },
+  zh:{
+    modeSnake:'贪吃蛇', modeMatch3:'三消', modeLian:'连连看', modeMole:'打地鼠',
+    score:'分数', best:'最高分', newGame:'新游戏', again:'再来一局', tipClose:'好的！',
+    slow:'慢速', fast:'快速', turbo:'极速',
+    ready:'▶ 准备', playing:'游戏中！', gameOver:'游戏结束', youWin:'你赢了！🎉',
+    tipSnake:'<b>贪吃蛇：</b>用方向键（或WASD/虚拟键）控制方向，吃🍎变长，不能碰墙或自身！',
+    tipMatch3:'<b>三消：</b>点击一颗宝石，再点击相邻宝石来交换。连成3个以上相同的即可消除！',
+    tipLian:'<b>连连看：</b>点击两张相同的牌，中间能以不超过2次转弯连通就消除。清空所有牌即胜！',
+    tipMole:'<b>打地鼠：</b>30秒内点击钻出来的地鼠！速度越来越快，看能得多少分！',
+  }
+};
+let lang='en';
+const t=k=>TI[lang][k]||TI.en[k]||k;
+function toggleLang(){lang=lang==='en'?'zh':'en';document.getElementById('langBtn').textContent=lang==='en'?'中':'EN';applyLang();}
+function applyLang(){
+  document.querySelectorAll('[data-k]').forEach(el=>el.textContent=t(el.getAttribute('data-k')));
+  updatePill();
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let mode='snake';
+let G={};
+let gameLoop=null;
+let bests={snake:0, match3:0, lian:0, mole:0};
+
+const cvs=document.getElementById('cvs');
+const ctx=cvs.getContext('2d');
+
+// ── Mode switching ─────────────────────────────────────────────────────────────
+document.querySelectorAll('.mode-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    mode=btn.dataset.mode;
+    document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active',b===btn));
+    stopLoop();
+    setupMode();
+    newGame();
+  });
+});
+
+function stopLoop(){
+  if(gameLoop){clearInterval(gameLoop);gameLoop=null;}
+}
+
+function setupMode(){
+  const sub=document.getElementById('mainSub');
+  const ss=document.getElementById('snakeSpeed');
+  const dp=document.getElementById('dpad');
+  ss.style.display='none'; dp.style.display='none';
+  if(mode==='snake'){
+    document.getElementById('mainTitle').textContent='Snake 🐍';
+    sub.textContent=lang==='en'?'Eat, grow, survive!':'吃，长大，生存！';
+    ss.style.display='flex'; dp.style.display='grid';
+    document.onkeydown=onSnakeKey;
+  } else if(mode==='match3'){
+    document.getElementById('mainTitle').textContent='Match 3 💎';
+    sub.textContent=lang==='en'?'Swap gems, match 3+!':'交换宝石，连消3个！';
+    document.onkeydown=null;
+  } else if(mode==='lian'){
+    document.getElementById('mainTitle').textContent='Connect 🀄';
+    sub.textContent=lang==='en'?'Connect matching tiles!':'连接相同的牌！';
+    document.onkeydown=null;
+  } else if(mode==='mole'){
+    document.getElementById('mainTitle').textContent='Whack-a-Mole 🐹';
+    sub.textContent=lang==='en'?'Hit the moles! 30s':'打地鼠！30秒';
+    document.onkeydown=null;
+  }
+}
+
+function newGame(){
+  stopLoop();
+  closeModal();
+  if(mode==='snake') initSnake();
+  else if(mode==='match3') initMatch3();
+  else if(mode==='lian') initLian();
+  else if(mode==='mole') initMole();
+}
+function closeModal(){document.getElementById('winOverlay').classList.add('hidden');}
+
+function showWin(emoji,title,cls,sub=''){
+  document.getElementById('winEmoji').textContent=emoji;
+  const tt=document.getElementById('winTitle');
+  tt.textContent=title; tt.className='modal-title'+(cls?' '+cls:'');
+  document.getElementById('winSub').textContent=sub;
+  document.getElementById('winOverlay').classList.remove('hidden');
+}
+
+function updateScore(s){
+  document.getElementById('scoreVal').textContent=s;
+  if(s>bests[mode]){bests[mode]=s;}
+  document.getElementById('bestVal').textContent=bests[mode];
+}
+function updatePill(txt,cls=''){
+  const p=document.getElementById('turnPill');
+  p.textContent=txt||t('ready');
+  p.className='turn-pill'+(cls?' '+cls:'');
+}
+
+function showTip(){
+  const tips={snake:'tipSnake',match3:'tipMatch3',lian:'tipLian',mole:'tipMole'};
+  document.getElementById('tipTitle').textContent=
+    mode==='snake'?t('modeSnake'):mode==='match3'?t('modeMatch3'):mode==='lian'?t('modeLian'):t('modeMole');
+  document.getElementById('tipBody').innerHTML=t(tips[mode]);
+  document.getElementById('tipOverlay').classList.remove('hidden');
+}
+function closeTip(){document.getElementById('tipOverlay').classList.add('hidden');}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SNAKE
+// ═══════════════════════════════════════════════════════════════════════════════
+const SN_COLS=20, SN_ROWS=20, SN_CELL=22;
+const SN_W=SN_COLS*SN_CELL, SN_H=SN_ROWS*SN_CELL;
+let snakeSpeedMs=180;
+
+function setSnakeSpeed(btn){
+  document.querySelectorAll('.speed-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  snakeSpeedMs=parseInt(btn.dataset.spd);
+  if(G.started&&!G.over){stopLoop();gameLoop=setInterval(snakeStep,snakeSpeedMs);}
+}
+
+function initSnake(){
+  cvs.width=SN_W; cvs.height=SN_H; cvs.style.cursor='default';
+  cvs.onclick=snakeStart;
+  G={
+    snake:[{r:10,c:10},{r:10,c:9},{r:10,c:8}],
+    dir:{dc:1,dr:0}, next:{dc:1,dr:0},
+    food:null, score:0, over:false, started:false
+  };
+  G.food=snakeNewFood();
+  updateScore(0); updatePill(t('ready'));
+  renderSnake();
+}
+
+function snakeStart(){
+  if(G.started||G.over) return;
+  G.started=true;
+  cvs.onclick=null;
+  updatePill(t('playing'),'pulse');
+  gameLoop=setInterval(snakeStep,snakeSpeedMs);
+}
+
+function snakeNewFood(){
+  const occupied=new Set(G.snake.map(s=>s.r*SN_COLS+s.c));
+  let r,c;
+  do{r=Math.floor(Math.random()*SN_ROWS);c=Math.floor(Math.random()*SN_COLS);}
+  while(occupied.has(r*SN_COLS+c));
+  return{r,c};
+}
+
+function onSnakeKey(e){
+  const map={ArrowUp:{dr:-1,dc:0},ArrowDown:{dr:1,dc:0},ArrowLeft:{dr:0,dc:-1},ArrowRight:{dr:0,dc:1},
+    w:{dr:-1,dc:0},s:{dr:1,dc:0},a:{dr:0,dc:-1},d:{dr:0,dc:1},
+    W:{dr:-1,dc:0},S:{dr:1,dc:0},A:{dr:0,dc:-1},D:{dr:0,dc:1}};
+  const d=map[e.key];
+  if(!d) return;
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+  if(!G.started&&!G.over) snakeStart();
+  if(d.dr===-G.dir.dr&&d.dc===-G.dir.dc) return;
+  G.next=d;
+}
+function snakeDir(dc,dr){
+  if(!G.started&&!G.over) snakeStart();
+  if(dr===-G.dir.dr&&dc===-G.dir.dc) return;
+  G.next={dr,dc};
+}
+
+function snakeStep(){
+  G.dir=G.next;
+  const head=G.snake[0];
+  const nr=head.r+G.dir.dr, nc=head.c+G.dir.dc;
+  if(nr<0||nr>=SN_ROWS||nc<0||nc>=SN_COLS||G.snake.some(s=>s.r===nr&&s.c===nc)){
+    G.over=true; stopLoop();
+    updatePill(t('gameOver'),'over');
+    renderSnake();
+    setTimeout(()=>showWin('😵',t('gameOver'),'lose',`${t('score')}: ${G.score}`),400);
+    return;
+  }
+  G.snake.unshift({r:nr,c:nc});
+  if(nr===G.food.r&&nc===G.food.c){
+    G.score++;
+    updateScore(G.score);
+    G.food=snakeNewFood();
+    // speed up every 5 points
+    if(G.score%5===0&&snakeSpeedMs>60){
+      stopLoop(); snakeSpeedMs=Math.max(60,snakeSpeedMs-15);
+      gameLoop=setInterval(snakeStep,snakeSpeedMs);
+    }
+  } else {
+    G.snake.pop();
+  }
+  renderSnake();
+}
+
+const FOOD_EMOJIS=['🍎','🍊','🍋','🍇','🍓','🍉'];
+function renderSnake(){
+  ctx.fillStyle='#1a3a1a'; ctx.fillRect(0,0,SN_W,SN_H);
+  // grid dots
+  ctx.fillStyle='rgba(255,255,255,0.06)';
+  for(let r=0;r<SN_ROWS;r++) for(let c=0;c<SN_COLS;c++){
+    ctx.fillRect(c*SN_CELL+SN_CELL/2-1,r*SN_CELL+SN_CELL/2-1,2,2);
+  }
+  // food
+  const fi=G.score%FOOD_EMOJIS.length;
+  ctx.font=`${SN_CELL-4}px serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(FOOD_EMOJIS[fi],G.food.c*SN_CELL+SN_CELL/2,G.food.r*SN_CELL+SN_CELL/2);
+  // body segments
+  G.snake.forEach((seg,i)=>{
+    const x=seg.c*SN_CELL, y=seg.r*SN_CELL;
+    const r2=SN_CELL/2-1;
+    if(i===0){
+      // head: kawaii face
+      ctx.fillStyle='#4ecc6a';
+      roundRect(ctx,x+1,y+1,SN_CELL-2,SN_CELL-2,5);
+      ctx.fill();
+      // eyes
+      ctx.fillStyle='#fff';
+      const ex=x+SN_CELL*.28, ex2=x+SN_CELL*.72, ey=y+SN_CELL*.38;
+      const er=SN_CELL*.1;
+      ctx.beginPath();ctx.arc(ex,ey,er,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(ex2,ey,er,0,Math.PI*2);ctx.fill();
+      // pupil
+      ctx.fillStyle='#111';
+      ctx.beginPath();ctx.arc(ex+er*.2,ey+er*.2,er*.55,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(ex2+er*.2,ey+er*.2,er*.55,0,Math.PI*2);ctx.fill();
+      // mouth smile
+      ctx.strokeStyle='#1a5a2a'; ctx.lineWidth=1.5; ctx.lineCap='round';
+      ctx.beginPath();ctx.arc(x+SN_CELL/2,y+SN_CELL*.62,SN_CELL*.15,0,Math.PI);ctx.stroke();
+    } else {
+      // body
+      const t2=i/G.snake.length;
+      ctx.fillStyle=`hsl(${130-t2*20},${70-t2*20}%,${40+t2*10}%)`;
+      roundRect(ctx,x+2,y+2,SN_CELL-4,SN_CELL-4,4);
+      ctx.fill();
+    }
+  });
+  // start hint
+  if(!G.started&&!G.over){
+    ctx.fillStyle='rgba(0,0,0,0.5)';
+    ctx.fillRect(0,SN_H/2-28,SN_W,56);
+    ctx.fillStyle='#fff'; ctx.font='bold 16px Nunito,sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(lang==='en'?'Press any arrow key or tap to start':'按方向键或点击开始',SN_W/2,SN_H/2);
+  }
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);
+  ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);
+  ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);
+  ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);
+  ctx.arcTo(x,y,x+r,y,r);ctx.closePath();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MATCH-3
+// ═══════════════════════════════════════════════════════════════════════════════
+const M3_ROWS=8, M3_COLS=8;
+let M3_CELL;
+const M3_GEMS=['🍎','🍊','🍋','🍇','🫐','🍓'];
+const M3_COLORS=['#ff6b6b','#ffa94d','#ffd43b','#cc5de8','#4dabf7','#f783ac'];
+
+function initMatch3(){
+  M3_CELL=Math.min(52, Math.floor((Math.min(window.innerWidth-32,440))/M3_COLS));
+  const W=M3_CELL*M3_COLS, H=M3_CELL*M3_ROWS;
+  cvs.width=W; cvs.height=H; cvs.style.cursor='pointer';
+  G={board:null, sel:null, score:0, animating:false, combo:0};
+  do{ G.board=Array.from({length:M3_ROWS},()=>Array.from({length:M3_COLS},()=>Math.floor(Math.random()*M3_GEMS.length)));
+  }while(findM3Matches(G.board).length>0);
+  cvs.onclick=m3Click;
+  updateScore(0); updatePill(t('playing'));
+  renderMatch3();
+}
+
+function renderMatch3(){
+  const C=M3_CELL;
+  ctx.fillStyle='#1a1a2e'; ctx.fillRect(0,0,cvs.width,cvs.height);
+  for(let r=0;r<M3_ROWS;r++) for(let c=0;c<M3_COLS;c++){
+    const x=c*C, y=r*C;
+    const v=G.board[r][c];
+    const isSel=G.sel&&G.sel.r===r&&G.sel.c===c;
+    // cell bg
+    ctx.fillStyle=isSel?'rgba(255,255,255,0.35)':'rgba(255,255,255,0.08)';
+    roundRect(ctx,x+2,y+2,C-4,C-4,7); ctx.fill();
+    if(v<0) continue;
+    if(isSel){ctx.strokeStyle='#fff';ctx.lineWidth=2.5;roundRect(ctx,x+2,y+2,C-4,C-4,7);ctx.stroke();}
+    // gem circle
+    ctx.fillStyle=M3_COLORS[v];
+    ctx.beginPath();ctx.arc(x+C/2,y+C/2,C*.35,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.4)';
+    ctx.beginPath();ctx.arc(x+C*.38,y+C*.38,C*.1,0,Math.PI*2);ctx.fill();
+    // emoji
+    ctx.font=`${C*.38}px serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(M3_GEMS[v],x+C/2,y+C/2+C*.01);
+  }
+}
+
+function m3Click(e){
+  if(G.animating) return;
+  const rect=cvs.getBoundingClientRect();
+  const C=M3_CELL;
+  const c=Math.floor((e.clientX-rect.left)/C);
+  const r=Math.floor((e.clientY-rect.top)/C);
+  if(r<0||r>=M3_ROWS||c<0||c>=M3_COLS) return;
+  if(!G.sel){G.sel={r,c};renderMatch3();return;}
+  const {r:sr,c:sc}=G.sel;
+  if(sr===r&&sc===c){G.sel=null;renderMatch3();return;}
+  if(Math.abs(r-sr)+Math.abs(c-sc)===1){
+    G.sel=null;
+    m3Swap(r,c,sr,sc);
+  } else {
+    G.sel={r,c}; renderMatch3();
+  }
+}
+
+function m3Swap(r1,c1,r2,c2){
+  G.animating=true;
+  const tmp=G.board[r1][c1]; G.board[r1][c1]=G.board[r2][c2]; G.board[r2][c2]=tmp;
+  const matches=findM3Matches(G.board);
+  if(!matches.length){
+    // swap back
+    const tmp2=G.board[r1][c1]; G.board[r1][c1]=G.board[r2][c2]; G.board[r2][c2]=tmp2;
+    G.animating=false; renderMatch3(); return;
+  }
+  G.combo=0;
+  m3ProcessMatches();
+}
+
+function findM3Matches(board){
+  const matched=new Set();
+  // horizontal
+  for(let r=0;r<M3_ROWS;r++) for(let c=0;c<M3_COLS-2;c++){
+    const v=board[r][c]; if(v<0) continue;
+    if(board[r][c+1]===v&&board[r][c+2]===v){
+      let len=3;while(c+len<M3_COLS&&board[r][c+len]===v)len++;
+      for(let k=0;k<len;k++) matched.add(r*M3_COLS+c+k);
+    }
+  }
+  // vertical
+  for(let c=0;c<M3_COLS;c++) for(let r=0;r<M3_ROWS-2;r++){
+    const v=board[r][c]; if(v<0) continue;
+    if(board[r+1][c]===v&&board[r+2][c]===v){
+      let len=3;while(r+len<M3_ROWS&&board[r+len][c]===v)len++;
+      for(let k=0;k<len;k++) matched.add((r+k)*M3_COLS+c);
+    }
+  }
+  return [...matched];
+}
+
+function m3ProcessMatches(){
+  const matches=findM3Matches(G.board);
+  if(!matches.length){G.animating=false;renderMatch3();checkM3Stuck();return;}
+  G.combo++;
+  const pts=matches.length*(G.combo>1?G.combo*2:1);
+  G.score+=pts; updateScore(G.score);
+  matches.forEach(idx=>G.board[Math.floor(idx/M3_COLS)][idx%M3_COLS]=-1);
+  renderMatch3();
+  setTimeout(()=>{
+    // gravity
+    for(let c=0;c<M3_COLS;c++){
+      const col=G.board.map(r=>r[c]).filter(v=>v>=0);
+      while(col.length<M3_ROWS) col.unshift(Math.floor(Math.random()*M3_GEMS.length));
+      for(let r=0;r<M3_ROWS;r++) G.board[r][c]=col[r];
+    }
+    renderMatch3();
+    setTimeout(m3ProcessMatches,200);
+  },300);
+}
+
+function checkM3Stuck(){
+  // Check if any swap produces a match
+  const dirs=[[0,1],[1,0]];
+  for(let r=0;r<M3_ROWS;r++) for(let c=0;c<M3_COLS;c++) for(const[dr,dc] of dirs){
+    const nr=r+dr,nc=c+dc; if(nr>=M3_ROWS||nc>=M3_COLS) continue;
+    const b=G.board.map(row=>[...row]);
+    const tmp=b[r][c]; b[r][c]=b[nr][nc]; b[nr][nc]=tmp;
+    if(findM3Matches(b).length>0) return;
+  }
+  // No moves — reshuffle
+  updatePill(lang==='en'?'Reshuffling…':'重新洗牌…');
+  setTimeout(()=>{
+    do{G.board=Array.from({length:M3_ROWS},()=>Array.from({length:M3_COLS},()=>Math.floor(Math.random()*M3_GEMS.length)));}
+    while(findM3Matches(G.board).length>0);
+    renderMatch3(); updatePill(t('playing'));
+  },600);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LIANLIANKAN (连连看)
+// ═══════════════════════════════════════════════════════════════════════════════
+const LL_COLS=8, LL_ROWS=6;
+const LL_EMOJIS=['🐱','🐶','🐸','🦊','🐼','🐨','🦁','🐯','🐙','🦋','🌸','⭐'];
+let LL_CELL;
+
+function initLian(){
+  LL_CELL=Math.min(62, Math.floor((Math.min(window.innerWidth-32,520))/(LL_COLS+2)));
+  const W=(LL_COLS+2)*LL_CELL, H=(LL_ROWS+2)*LL_CELL;
+  cvs.width=W; cvs.height=H; cvs.style.cursor='pointer';
+  // board: (LL_ROWS+2) x (LL_COLS+2), border=0, inner has pairs
+  const totalCells=LL_ROWS*LL_COLS; // 48 cells = 24 pairs
+  const pairs=totalCells/2;
+  const emojis=[];
+  for(let i=0;i<pairs;i++) emojis.push(i%LL_EMOJIS.length, i%LL_EMOJIS.length);
+  shuffle(emojis);
+  G={
+    board:Array.from({length:LL_ROWS+2},()=>Array(LL_COLS+2).fill(0)),
+    sel:null, score:0, remaining:totalCells, flash:null
+  };
+  let idx=0;
+  for(let r=1;r<=LL_ROWS;r++) for(let c=1;c<=LL_COLS;c++) G.board[r][c]=emojis[idx++]+1;
+  cvs.onclick=lianClick;
+  updateScore(0); updatePill(t('playing'));
+  renderLian();
+}
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
+
+function renderLian(){
+  const C=LL_CELL;
+  const rows=LL_ROWS+2, cols=LL_COLS+2;
+  ctx.fillStyle='#1a2a3a'; ctx.fillRect(0,0,cvs.width,cvs.height);
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const v=G.board[r][c];
+    const x=c*C, y=r*C;
+    if(r===0||r===rows-1||c===0||c===cols-1) continue; // border
+    const isSel=G.sel&&G.sel[0]===r&&G.sel[1]===c;
+    if(v===0){
+      // empty cell
+      ctx.fillStyle='rgba(255,255,255,0.04)';
+      roundRect(ctx,x+3,y+3,C-6,C-6,6); ctx.fill();
+      continue;
+    }
+    // tile
+    ctx.fillStyle=isSel?'#ffe066':'rgba(255,255,255,0.9)';
+    roundRect(ctx,x+3,y+3,C-6,C-6,8); ctx.fill();
+    if(isSel){ctx.strokeStyle='#f4a94e';ctx.lineWidth=2.5;roundRect(ctx,x+3,y+3,C-6,C-6,8);ctx.stroke();}
+    ctx.font=`${C*.5}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(LL_EMOJIS[(v-1)%LL_EMOJIS.length],x+C/2,y+C/2);
+  }
+  // draw flash path
+  if(G.flash){
+    ctx.strokeStyle='rgba(255,200,60,0.85)'; ctx.lineWidth=3; ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.beginPath();
+    G.flash.forEach(([r2,c2],i)=>{
+      const x=c2*C+C/2, y=r2*C+C/2;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  }
+}
+
+function lianClick(e){
+  const rect=cvs.getBoundingClientRect();
+  const C=LL_CELL;
+  const c=Math.floor((e.clientX-rect.left)/C);
+  const r=Math.floor((e.clientY-rect.top)/C);
+  if(r<1||r>LL_ROWS||c<1||c>LL_COLS) return;
+  if(G.board[r][c]===0) return;
+  if(!G.sel){G.sel=[r,c];renderLian();return;}
+  const [sr,sc]=G.sel;
+  if(sr===r&&sc===c){G.sel=null;renderLian();return;}
+  if(G.board[r][c]!==G.board[sr][sc]){G.sel=[r,c];renderLian();return;}
+  const path=lianFindPath(sr,sc,r,c);
+  if(path){
+    G.flash=path;
+    G.board[sr][sc]=0; G.board[r][c]=0;
+    G.remaining-=2; G.sel=null;
+    G.score+=10; updateScore(G.score);
+    renderLian();
+    setTimeout(()=>{
+      G.flash=null;
+      if(G.remaining===0){
+        renderLian();
+        setTimeout(()=>showWin('🎉',t('youWin'),'',`${t('score')}: ${G.score}`),200);
+      } else {
+        if(!lianHasMoves()) lianHint();
+        renderLian();
+      }
+    },400);
+  } else {
+    G.sel=[r,c]; renderLian();
+  }
+}
+
+// BFS with turn count ≤ 2
+function lianFindPath(r1,c1,r2,c2){
+  const rows=LL_ROWS+2, cols=LL_COLS+2;
+  // State: (r, c, lastDir, turns)
+  // lastDir: -1=none, 0=up, 1=down, 2=left, 3=right
+  const dirs=[[-1,0],[1,0],[0,-1],[0,1]];
+  const key=(r,c,d,t)=>`${r},${c},${d},${t}`;
+  const visited=new Set();
+  // BFS queue: {r,c,dir,turns,path}
+  const queue=[{r:r1,c:c1,dir:-1,turns:0,path:[[r1,c1]]}];
+  while(queue.length){
+    const {r,c,dir,turns,path}=queue.shift();
+    for(let d=0;d<4;d++){
+      const nr=r+dirs[d][0], nc=c+dirs[d][1];
+      if(nr<0||nr>=rows||nc<0||nc>=cols) continue;
+      const newTurns=turns+(dir!==-1&&d!==dir?1:0);
+      if(newTurns>2) continue;
+      const k=key(nr,nc,d,newTurns);
+      if(visited.has(k)) continue;
+      visited.add(k);
+      const newPath=[...path,[nr,nc]];
+      if(nr===r2&&nc===c2) return newPath;
+      // can only traverse empty cells (except dest)
+      if(G.board[nr][nc]!==0) continue;
+      queue.push({r:nr,c:nc,dir:d,turns:newTurns,path:newPath});
+    }
+  }
+  return null;
+}
+
+function lianHasMoves(){
+  for(let r1=1;r1<=LL_ROWS;r1++) for(let c1=1;c1<=LL_COLS;c1++){
+    if(!G.board[r1][c1]) continue;
+    for(let r2=1;r2<=LL_ROWS;r2++) for(let c2=1;c2<=LL_COLS;c2++){
+      if(r1===r2&&c1===c2) continue;
+      if(G.board[r1][c1]!==G.board[r2][c2]) continue;
+      if(lianFindPath(r1,c1,r2,c2)) return true;
+    }
+  }
+  return false;
+}
+
+function lianHint(){
+  // Shuffle inner tiles
+  updatePill(lang==='en'?'Shuffling…':'重排中…');
+  const tiles=[];
+  for(let r=1;r<=LL_ROWS;r++) for(let c=1;c<=LL_COLS;c++) if(G.board[r][c]) tiles.push(G.board[r][c]);
+  shuffle(tiles);
+  let idx=0;
+  for(let r=1;r<=LL_ROWS;r++) for(let c=1;c<=LL_COLS;c++) if(G.board[r][c]) G.board[r][c]=tiles[idx++];
+  setTimeout(()=>updatePill(t('playing')),600);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WHACK-A-MOLE
+// ═══════════════════════════════════════════════════════════════════════════════
+const WM_COLS=3, WM_ROWS=3;
+let WM_CELL;
+const WM_MOLE_EMOJIS=['🐹','🐭','🐰','🦔'];
+
+function initMole(){
+  WM_CELL=Math.min(130, Math.floor((Math.min(window.innerWidth-32,420))/WM_COLS));
+  const W=WM_CELL*WM_COLS, H=WM_CELL*WM_ROWS;
+  cvs.width=W; cvs.height=H; cvs.style.cursor='pointer';
+  G={
+    moles:Array.from({length:WM_ROWS},()=>Array(WM_COLS).fill(0)), // 0=hidden,1=up,2=hit
+    score:0, timeLeft:30, over:false, speed:1400,
+    moleTimers:[], // per-hole countdown
+  };
+  cvs.onclick=moleClick;
+  updateScore(0);
+  updatePill('30s ⏱️');
+  renderMole();
+  // start countdown
+  const timerTick=setInterval(()=>{
+    G.timeLeft--;
+    updatePill(G.timeLeft+'s ⏱️');
+    if(G.timeLeft<=0){
+      clearInterval(timerTick); stopLoop();
+      G.moleTimers.forEach(t=>clearTimeout(t));
+      G.over=true; cvs.style.cursor='default';
+      renderMole();
+      setTimeout(()=>showWin('🐹',t('gameOver'),'',`${t('score')}: ${G.score}`),300);
+    }
+    // increase speed over time
+    if(G.timeLeft===20) G.speed=1100;
+    if(G.timeLeft===10) G.speed=800;
+  },1000);
+  G.moleTimers.push(timerTick);
+  // start popping moles
+  gameLoop=setInterval(molePopRandom,600);
+}
+
+function molePopRandom(){
+  if(G.over) return;
+  // find a hidden hole
+  const hidden=[];
+  for(let r=0;r<WM_ROWS;r++) for(let c=0;c<WM_COLS;c++) if(G.board&&G.moles[r][c]===0) hidden.push([r,c]);
+  // actually just pick a random hole ignoring state if all occupied
+  const r=Math.floor(Math.random()*WM_ROWS), c=Math.floor(Math.random()*WM_COLS);
+  if(G.moles[r][c]!==0) return;
+  G.moles[r][c]=1;
+  renderMole();
+  const t=setTimeout(()=>{
+    if(G.moles[r][c]===1){G.moles[r][c]=0;renderMole();}
+  }, G.speed);
+  G.moleTimers.push(t);
+}
+
+function moleClick(e){
+  if(G.over) return;
+  const rect=cvs.getBoundingClientRect();
+  const C=WM_CELL;
+  const c=Math.floor((e.clientX-rect.left)/C);
+  const r=Math.floor((e.clientY-rect.top)/C);
+  if(r<0||r>=WM_ROWS||c<0||c>=WM_COLS) return;
+  if(G.moles[r][c]===1){
+    G.moles[r][c]=2; // hit
+    G.score++; updateScore(G.score);
+    renderMole();
+    setTimeout(()=>{if(G.moles[r][c]===2){G.moles[r][c]=0;renderMole();}},250);
+  }
+}
+
+function renderMole(){
+  const C=WM_CELL;
+  // background
+  ctx.fillStyle='#3a7a2a'; ctx.fillRect(0,0,cvs.width,cvs.height);
+  // grass pattern
+  ctx.fillStyle='#4a9a3a';
+  for(let r=0;r<WM_ROWS;r++) for(let c=0;c<WM_COLS;c++){
+    if((r+c)%2===0){ctx.fillRect(c*C,r*C,C,C);}
+  }
+  // holes & moles
+  for(let r=0;r<WM_ROWS;r++) for(let c=0;c<WM_COLS;c++){
+    const x=c*C+C/2, y=r*C+C/2;
+    const state=G.moles[r][c];
+    // hole (dark oval)
+    ctx.fillStyle='#1a3a10';
+    ctx.beginPath();ctx.ellipse(x,y+C*.1,C*.38,C*.18,0,0,Math.PI*2);ctx.fill();
+    if(state>0){
+      // mole body
+      const hitColor=state===2?'#ff6060':'#c07040';
+      ctx.fillStyle=hitColor;
+      ctx.beginPath();ctx.ellipse(x,y-C*.08,C*.3,C*.36,0,0,Math.PI*2);ctx.fill();
+      // mole face emoji
+      ctx.font=`${C*.52}px serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      const emoji=state===2?'😵':WM_MOLE_EMOJIS[Math.floor(G.score/3)%WM_MOLE_EMOJIS.length];
+      ctx.fillText(emoji,x,y-C*.1);
+      // stars on hit
+      if(state===2){
+        ctx.font=`${C*.22}px serif`;
+        ctx.fillText('⭐',x-C*.38,y-C*.45);
+        ctx.fillText('✨',x+C*.3,y-C*.5);
+      }
+    }
+  }
+  if(G.over){
+    ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(0,0,cvs.width,cvs.height);
+    ctx.fillStyle='#fff';ctx.font=`bold ${C*.28}px Nunito,sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(t('gameOver'),cvs.width/2,cvs.height/2);
+  }
+}
+
+// ── Startup ───────────────────────────────────────────────────────────────────
+setupMode();
+newGame();
+applyLang();
+</script>
+</body>
+</html>
