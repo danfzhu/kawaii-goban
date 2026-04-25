@@ -131,6 +131,7 @@ body{
 <div class="score-bar" id="scoreBar">
   <div class="score-item"><div class="score-lbl" data-k="score">Score</div><div class="score-val" id="scoreVal">0</div></div>
   <div class="score-item"><div class="score-lbl" data-k="best">Best</div><div class="score-val" id="bestVal">0</div></div>
+  <div class="score-item" id="m3MovesItem" style="display:none"><div class="score-lbl" id="m3MovesLbl">Moves</div><div class="score-val" id="m3MovesVal">25</div></div>
   <div class="turn-pill" id="turnPill">▶ Ready</div>
 </div>
 
@@ -167,6 +168,13 @@ body{
       <button class="speed-btn" data-spd="70" onclick="setSnakeSpeed(this)">⚡ <span data-k="turbo">Turbo</span></button>
     </div>
   </div>
+  <div class="ctrl-row" id="m3Diff" style="display:none">
+    <div class="speed-bar">
+      <button class="speed-btn" data-diff="easy" onclick="setM3Diff(this)">🌱 <span data-k="m3Easy">Easy</span></button>
+      <button class="speed-btn active" data-diff="medium" onclick="setM3Diff(this)">🎯 <span data-k="m3Med">Medium</span></button>
+      <button class="speed-btn" data-diff="hard" onclick="setM3Diff(this)">🔥 <span data-k="m3Hard">Hard</span></button>
+    </div>
+  </div>
   <div class="ctrl-row">
     <button class="ctrl-btn primary" onclick="newGame()">✨ <span data-k="newGame">New Game</span></button>
   </div>
@@ -199,7 +207,7 @@ const TI={
   en:{
     modeSnake:'Snake', modeMatch3:'Match 3', modeLian:'Connect', modeMole:'Whack-a-Mole',
     score:'Score', best:'Best', newGame:'New Game', again:'Play Again', tipClose:'Got it!',
-    slow:'Slow', fast:'Fast', turbo:'Turbo',
+    slow:'Slow', fast:'Fast', turbo:'Turbo', m3Easy:'Easy', m3Med:'Medium', m3Hard:'Hard', m3Moves:'Moves',
     ready:'▶ Ready', playing:'Playing!', gameOver:'Game Over', youWin:'You Win! 🎉',
     tipSnake:'<b>Snake:</b> Arrow keys / WASD / D-pad to steer. Eat 🍎 to grow!<br><br>Power-ups appear and vanish (blink = almost gone!):<br>⚡ Speed Up &nbsp; 🐢 Slow Mo &nbsp; ✂️ Snip (shorter)<br>⭐ +5 pts &nbsp; 🛡️ Shield (pass wall once) &nbsp; 💣 Bomb (avoid!)',
     tipMatch3:'<b>Match 3:</b> Click a gem, then click an adjacent gem to swap. Match 3 or more in a row/column to clear them! Score combos for bonus points.',
@@ -209,7 +217,7 @@ const TI={
   zh:{
     modeSnake:'贪吃蛇', modeMatch3:'三消', modeLian:'连连看', modeMole:'打地鼠',
     score:'分数', best:'最高分', newGame:'新游戏', again:'再来一局', tipClose:'好的！',
-    slow:'慢速', fast:'快速', turbo:'极速',
+    slow:'慢速', fast:'快速', turbo:'极速', m3Easy:'简单', m3Med:'普通', m3Hard:'困难', m3Moves:'步数',
     ready:'▶ 准备', playing:'游戏中！', gameOver:'游戏结束', youWin:'你赢了！🎉',
     tipSnake:'<b>贪吃蛇：</b>方向键/WASD/虚拟键控制，吃🍎长大！<br><br>道具会出现然后消失（闪烁=快没了）：<br>⚡加速 &nbsp; 🐢减速 &nbsp; ✂️变短 &nbsp; ⭐+5分 &nbsp; 🛡️护盾（穿墙一次） &nbsp; 💣炸弹（要躲开！）',
     tipMatch3:'<b>三消：</b>点击一颗宝石，再点击相邻宝石来交换。连成3个以上相同的即可消除！',
@@ -230,6 +238,18 @@ let mode='snake';
 let G={};
 let gameLoop=null;
 let bests={snake:0, match3:0, lian:0, mole:0};
+let m3Difficulty='medium';
+const M3_MOVES={easy:40, medium:25, hard:15};
+
+function setM3Diff(btn){
+  document.querySelectorAll('#m3Diff .speed-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  m3Difficulty=btn.dataset.diff;
+  newGame();
+}
+function m3UpdateMoves(){
+  document.getElementById('m3MovesVal').textContent=G.moves;
+}
 
 const cvs=document.getElementById('cvs');
 const ctx=cvs.getContext('2d');
@@ -262,6 +282,8 @@ function setupMode(){
   const sub=document.getElementById('mainSub');
   const ss=document.getElementById('snakeSpeed');
   ss.style.display='none';
+  document.getElementById('m3Diff').style.display='none';
+  document.getElementById('m3MovesItem').style.display='none';
   setDpad(false);
   if(mode==='snake'){
     document.getElementById('mainTitle').textContent='Snake 🐍';
@@ -272,6 +294,9 @@ function setupMode(){
   } else if(mode==='match3'){
     document.getElementById('mainTitle').textContent='Match 3 💎';
     sub.textContent=lang==='en'?'Swap gems, match 3+!':'交换宝石，连消3个！';
+    document.getElementById('m3Diff').style.display='flex';
+    document.getElementById('m3MovesItem').style.display='';
+    document.getElementById('m3MovesLbl').textContent=t('m3Moves');
     document.onkeydown=null;
   } else if(mode==='lian'){
     document.getElementById('mainTitle').textContent='Connect 🀄';
@@ -710,137 +735,178 @@ function roundRect(ctx,x,y,w,h,r){
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MATCH-3  (animated: swap slide · pop burst · gravity drop · combo flash)
+// MATCH-3  (animated + power-up gems: row/col/cross/rainbow bombs)
 // ═══════════════════════════════════════════════════════════════════════════════
 const M3_ROWS=8, M3_COLS=8;
 let M3_CELL, m3AF=null;
 const M3_GEMS=['🍎','🍊','🍋','🍇','🫐','🍓'];
 const M3_COLORS=['#ff6b6b','#ffa94d','#ffd43b','#cc5de8','#4dabf7','#f783ac'];
+// special gem types: 'row' | 'col' | 'cross' | 'rainbow'
+// G.specials = Map<r*M3_COLS+c, {type, color}>
 
-// easing helpers
 function m3EaseOut(t){return 1-(1-t)*(1-t)*(1-t);}
-function m3EaseBack(t){// cubic ease-out with slight overshoot (spring)
-  return 1+2.7*Math.pow(t-1,3)+1.7*Math.pow(t-1,2);
-}
+function m3EaseBack(t){return 1+2.7*Math.pow(t-1,3)+1.7*Math.pow(t-1,2);}
 
-// RAF-based animation engine
 function m3StopRaf(){if(m3AF){cancelAnimationFrame(m3AF);m3AF=null;}}
 function m3Tick(){
-  const now=Date.now();
-  renderMatch3(now);
-  if(G.anims&&G.anims.some(a=>now<a.startT+a.dur)){
-    m3AF=requestAnimationFrame(m3Tick);
-  } else {
-    m3AF=null; G.anims=[];
-    if(G._m3done){const f=G._m3done;G._m3done=null;f();}
-  }
+  const now=Date.now(); renderMatch3(now);
+  if(G.anims&&G.anims.some(a=>now<a.startT+a.dur)) m3AF=requestAnimationFrame(m3Tick);
+  else{m3AF=null;G.anims=[];if(G._m3done){const f=G._m3done;G._m3done=null;f();}}
 }
-function m3Play(anims,done){
-  m3StopRaf(); G.anims=anims; G._m3done=done||null;
-  m3AF=requestAnimationFrame(m3Tick);
-}
+function m3Play(anims,done){m3StopRaf();G.anims=anims;G._m3done=done||null;m3AF=requestAnimationFrame(m3Tick);}
 
 function initMatch3(){
   M3_CELL=Math.min(52,Math.floor(Math.min(window.innerWidth-32,440)/M3_COLS));
   cvs.width=M3_CELL*M3_COLS; cvs.height=M3_CELL*M3_ROWS; cvs.style.cursor='pointer';
   m3StopRaf();
-  G={board:null,sel:null,score:0,animating:false,combo:0,anims:[],_m3done:null,m3Combo:null};
+  const maxMov=M3_MOVES[m3Difficulty]||25;
+  G={board:null,sel:null,score:0,animating:false,combo:0,anims:[],_m3done:null,
+     m3Combo:null, specials:new Map(), lastSwap:null, moves:maxMov};
   do{G.board=Array.from({length:M3_ROWS},()=>Array.from({length:M3_COLS},()=>Math.floor(Math.random()*M3_GEMS.length)));
   }while(findM3Matches(G.board).length>0);
   cvs.onclick=m3Click;
-  updateScore(0);updatePill(t('playing'));
+  m3UpdateMoves();
+  updateScore(0); updatePill(t('playing'));
   renderMatch3(Date.now());
 }
 
-function renderMatch3(now){
-  if(now===undefined) now=Date.now();
+function renderMatch3(now=Date.now()){
   const C=M3_CELL;
   ctx.fillStyle='#1a1a2e'; ctx.fillRect(0,0,cvs.width,cvs.height);
-
-  // build anim lookup map  r*M3_COLS+c → [anim,...]
   const am=new Map();
-  (G.anims||[]).forEach(a=>{
-    const k=a.r*M3_COLS+a.c; am.set(k,(am.get(k)||[]).concat(a));
-  });
+  (G.anims||[]).forEach(a=>{const k=a.r*M3_COLS+a.c;am.set(k,(am.get(k)||[]).concat(a));});
 
   for(let r=0;r<M3_ROWS;r++) for(let c=0;c<M3_COLS;c++){
     const x=c*C,y=r*C,v=G.board[r][c];
     const isSel=G.sel&&G.sel.r===r&&G.sel.c===c;
-    // cell background
+    const sp=G.specials.get(r*M3_COLS+c)||null;
     ctx.fillStyle=isSel?'rgba(255,255,255,0.28)':'rgba(255,255,255,0.07)';
     roundRect(ctx,x+2,y+2,C-4,C-4,7); ctx.fill();
-
     const aa=am.get(r*M3_COLS+c)||[];
     const swA=aa.find(a=>a.type==='swap');
     const drA=aa.find(a=>a.type==='drop');
     const poA=aa.find(a=>a.type==='pop');
-
+    const spA=aa.find(a=>a.type==='spawn');
     if(v<0){
-      // empty cell — draw pop ghost if active
-      if(poA){
-        const tp=Math.min(1,(now-poA.startT)/poA.dur);
-        m3DrawGem(x+C/2,y+C/2,C,poA.gem,1+tp*0.65,1-m3EaseOut(tp),false);
-      }
+      if(poA){const tp=Math.min(1,(now-poA.startT)/poA.dur);m3DrawGem(x+C/2,y+C/2,C,poA.gem,1+tp*0.7,1-m3EaseOut(tp),false,poA.sp);}
       continue;
     }
-
     if(swA){
-      // sliding gem
       const ts=Math.min(1,Math.max(0,(now-swA.startT)/swA.dur));
       const p=swA.rev?1-m3EaseOut(ts):m3EaseOut(ts);
-      m3DrawGem(x+C/2+(swA.toC-c)*C*p,y+C/2+(swA.toR-r)*C*p,C,v,1,1,isSel);
+      m3DrawGem(x+C/2+(swA.toC-c)*C*p,y+C/2+(swA.toR-r)*C*p,C,v,1,1,isSel,sp);
       continue;
     }
-
-    // normal gem — apply drop offset if present
-    let gx=x+C/2, gy=y+C/2;
-    let gs=isSel?1+0.07*Math.sin(now/120):1; // selection pulse
-    if(drA){
-      const td=Math.min(1,Math.max(0,(now-drA.startT)/drA.dur));
-      gy=y+C/2-(1-m3EaseBack(td))*drA.fromRows*C;
-    }
-    m3DrawGem(gx,gy,C,v,gs,1,isSel);
+    let gx=x+C/2,gy=y+C/2,gs=isSel?1+0.07*Math.sin(now/120):1;
+    if(drA){const td=Math.min(1,Math.max(0,(now-drA.startT)/drA.dur));gy=y+C/2-(1-m3EaseBack(td))*drA.fromRows*C;}
+    if(spA){const ts=Math.min(1,Math.max(0,(now-spA.startT)/spA.dur));gs*=m3EaseBack(ts);}
+    m3DrawGem(gx,gy,C,v,gs,1,isSel,sp);
   }
 
-  // combo flash  (centre of board)
+  // ── blast effects (drawn on top, not per-cell) ──
+  (G.anims||[]).filter(a=>a.type==='blast').forEach(a=>{
+    const t=Math.min(1,(now-a.startT)/a.dur);
+    const alpha=Math.max(0,0.55*(1-t*t));
+    if(alpha<0.01) return;
+    const cx=a.c*C+C/2, cy=a.r*C+C/2;
+    ctx.save(); ctx.globalAlpha=alpha;
+    ctx.fillStyle=a.col||'rgba(255,240,120,0.9)';
+    ctx.shadowColor=a.col||'#fff'; ctx.shadowBlur=18*(1-t);
+    switch(a.btype){
+      case 'row': ctx.fillRect(0,cy-C*.22,cvs.width,C*.44); break;
+      case 'col': ctx.fillRect(cx-C*.22,0,C*.44,cvs.height); break;
+      case 'cross':
+        ctx.fillRect(0,cy-C*.22,cvs.width,C*.44);
+        ctx.fillRect(cx-C*.22,0,C*.44,cvs.height); break;
+      case 'rainbow':{
+        const rad=C*(0.4+t*Math.sqrt(cvs.width*cvs.width+cvs.height*cvs.height)/C);
+        const g=ctx.createRadialGradient(cx,cy,0,cx,cy,rad);
+        ['#ff6b6b','#ffd43b','#4dabf7','#f783ac'].forEach((col,i,arr)=>g.addColorStop(i/(arr.length-1),col));
+        ctx.strokeStyle=g; ctx.lineWidth=C*.18*(1-t);
+        ctx.beginPath(); ctx.arc(cx,cy,Math.min(rad,Math.hypot(cvs.width,cvs.height)),0,Math.PI*2); ctx.stroke();
+      } break;
+    }
+    ctx.restore();
+  });
+
+  // ── combo flash ──
   if(G.m3Combo&&G.m3Combo.till>now){
-    const frac=(G.m3Combo.till-now)/900;
-    const alpha=Math.min(1,frac*3);
-    const sc=1+0.4*(1-frac);
+    const frac=(G.m3Combo.till-now)/900,alpha=Math.min(1,frac*3),sc=1+0.4*(1-frac);
     ctx.save(); ctx.globalAlpha=alpha;
     ctx.font=`bold ${Math.round(C*sc)}px Nunito,sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillStyle='#ffd43b';
-    ctx.shadowColor='rgba(0,0,0,0.6)'; ctx.shadowBlur=10;
+    ctx.fillStyle='#ffd43b'; ctx.shadowColor='rgba(0,0,0,0.6)'; ctx.shadowBlur=10;
     ctx.fillText(G.m3Combo.txt,cvs.width/2,cvs.height/2);
     ctx.restore();
   }
 }
 
-function m3DrawGem(cx,cy,C,gem,scale,alpha,sel){
-  if(alpha<0.02) return;
-  ctx.save();
-  ctx.globalAlpha=alpha;
-  ctx.translate(cx,cy);
+function m3DrawGem(cx,cy,C,gem,scale,alpha,sel,special){
+  if(alpha<0.02||scale<0.01) return;
+  ctx.save(); ctx.globalAlpha=alpha; ctx.translate(cx,cy);
   if(scale!==1) ctx.scale(scale,scale);
   ctx.shadowColor='rgba(0,0,0,0.28)'; ctx.shadowBlur=6;
-  ctx.fillStyle=M3_COLORS[gem];
-  ctx.beginPath();ctx.arc(0,0,C*.35,0,Math.PI*2);ctx.fill();
+  // base circle: rainbow gradient for rainbow bomb, else normal color
+  if(special?.type==='rainbow'){
+    const g=ctx.createLinearGradient(-C*.35,-C*.35,C*.35,C*.35);
+    g.addColorStop(0,'#ff6b6b'); g.addColorStop(0.33,'#ffd43b');
+    g.addColorStop(0.66,'#4dabf7'); g.addColorStop(1,'#f783ac');
+    ctx.fillStyle=g;
+  } else { ctx.fillStyle=M3_COLORS[gem]; }
+  ctx.beginPath(); ctx.arc(0,0,C*.35,0,Math.PI*2); ctx.fill();
   ctx.shadowBlur=0;
   ctx.fillStyle='rgba(255,255,255,0.38)';
-  ctx.beginPath();ctx.arc(-C*.12,-C*.12,C*.1,0,Math.PI*2);ctx.fill();
-  ctx.font=`${C*.38}px serif`;
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(M3_GEMS[gem],0,C*.01);
-  if(sel){ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(0,0,C*.38,0,Math.PI*2);ctx.stroke();}
+  ctx.beginPath(); ctx.arc(-C*.12,-C*.12,C*.1,0,Math.PI*2); ctx.fill();
+  if(special?.type==='rainbow'){
+    // star icon + pulsing ring
+    ctx.fillStyle='rgba(255,255,255,0.95)';
+    ctx.font=`bold ${C*.44}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('★',0,C*.02);
+    const pulse=0.88+0.12*Math.sin(Date.now()/180);
+    const rg=ctx.createLinearGradient(-C*.4,0,C*.4,0);
+    rg.addColorStop(0,'#ff6b6b'); rg.addColorStop(0.5,'#ffd43b'); rg.addColorStop(1,'#4dabf7');
+    ctx.strokeStyle=rg; ctx.lineWidth=C*.075*pulse;
+    ctx.beginPath(); ctx.arc(0,0,C*.39,0,Math.PI*2); ctx.stroke();
+  } else {
+    ctx.font=`${C*.38}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(M3_GEMS[gem],0,C*.01);
+  }
+  // ── special overlays ──
+  if(special){
+    ctx.strokeStyle='rgba(255,255,255,0.85)'; ctx.lineCap='round';
+    switch(special.type){
+      case 'row':
+        ctx.lineWidth=C*.065;
+        ctx.beginPath(); ctx.moveTo(-C*.33,-C*.1); ctx.lineTo(C*.33,-C*.1); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-C*.33,C*.1); ctx.lineTo(C*.33,C*.1); ctx.stroke();
+        ctx.fillStyle='rgba(255,255,255,0.85)';
+        ctx.beginPath(); ctx.moveTo(-C*.37,0); ctx.lineTo(-C*.29,-C*.11); ctx.lineTo(-C*.29,C*.11); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(C*.37,0); ctx.lineTo(C*.29,-C*.11); ctx.lineTo(C*.29,C*.11); ctx.fill();
+        break;
+      case 'col':
+        ctx.lineWidth=C*.065;
+        ctx.beginPath(); ctx.moveTo(-C*.1,-C*.33); ctx.lineTo(-C*.1,C*.33); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(C*.1,-C*.33); ctx.lineTo(C*.1,C*.33); ctx.stroke();
+        ctx.fillStyle='rgba(255,255,255,0.85)';
+        ctx.beginPath(); ctx.moveTo(0,-C*.37); ctx.lineTo(-C*.11,-C*.29); ctx.lineTo(C*.11,-C*.29); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(0,C*.37); ctx.lineTo(-C*.11,C*.29); ctx.lineTo(C*.11,C*.29); ctx.fill();
+        break;
+      case 'cross':
+        ctx.lineWidth=C*.07;
+        for(let i=0;i<4;i++){ctx.save();ctx.rotate(i*Math.PI/4);ctx.beginPath();ctx.moveTo(0,-C*.14);ctx.lineTo(0,-C*.37);ctx.stroke();ctx.restore();}
+        ctx.fillStyle='rgba(255,255,255,0.92)';
+        ctx.beginPath(); ctx.arc(0,0,C*.1,0,Math.PI*2); ctx.fill();
+        break;
+    }
+  }
+  if(sel){ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(0,0,C*.39,0,Math.PI*2);ctx.stroke();}
   ctx.restore();
 }
 
 function m3Click(e){
   if(G.animating) return;
   const rect=cvs.getBoundingClientRect(),C=M3_CELL;
-  const c=Math.floor((e.clientX-rect.left)/C);
-  const r=Math.floor((e.clientY-rect.top)/C);
+  const c=Math.floor((e.clientX-rect.left)/C),r=Math.floor((e.clientY-rect.top)/C);
   if(r<0||r>=M3_ROWS||c<0||c>=M3_COLS||G.board[r][c]<0) return;
   if(!G.sel){G.sel={r,c};renderMatch3();return;}
   const{r:sr,c:sc}=G.sel;
@@ -851,98 +917,186 @@ function m3Click(e){
 
 function m3TrySwap(r1,c1,r2,c2){
   G.animating=true;
-  // pre-check without committing
+  const k1=r1*M3_COLS+c1, k2=r2*M3_COLS+c2;
+  const hadSp1=G.specials.has(k1), hadSp2=G.specials.has(k2);
+  // pre-check
   const tmp=G.board[r1][c1];G.board[r1][c1]=G.board[r2][c2];G.board[r2][c2]=tmp;
-  const ok=findM3Matches(G.board).length>0;
+  const ok=findM3Matches(G.board).length>0 || hadSp1 || hadSp2;
   const tmp2=G.board[r1][c1];G.board[r1][c1]=G.board[r2][c2];G.board[r2][c2]=tmp2;
-
-  const now=Date.now(),dur=165;
-  const swAnims=[
-    {type:'swap',r:r1,c:c1,toR:r2,toC:c2,startT:now,dur},
-    {type:'swap',r:r2,c:c2,toR:r1,toC:c1,startT:now,dur},
-  ];
+  const now=Date.now(),dur=165,half=Math.round(dur*.52);
   if(!ok){
-    // slide forward a bit then bounce back
-    const half=Math.round(dur*.52);
-    m3Play([
-      {type:'swap',r:r1,c:c1,toR:r2,toC:c2,startT:now,dur:half},
-      {type:'swap',r:r2,c:c2,toR:r1,toC:c1,startT:now,dur:half},
-    ],()=>m3Play([
-      {type:'swap',r:r1,c:c1,toR:r2,toC:c2,startT:Date.now(),dur:half,rev:true},
-      {type:'swap',r:r2,c:c2,toR:r1,toC:c1,startT:Date.now(),dur:half,rev:true},
-    ],()=>{G.animating=false;renderMatch3();}));
+    m3Play([{type:'swap',r:r1,c:c1,toR:r2,toC:c2,startT:now,dur:half},{type:'swap',r:r2,c:c2,toR:r1,toC:c1,startT:now,dur:half}],
+      ()=>m3Play([{type:'swap',r:r1,c:c1,toR:r2,toC:c2,startT:Date.now(),dur:half,rev:true},{type:'swap',r:r2,c:c2,toR:r1,toC:c1,startT:Date.now(),dur:half,rev:true}],
+        ()=>{G.animating=false;renderMatch3();}));
     return;
   }
-  // valid swap: slide then commit
-  m3Play(swAnims,()=>{
+  // decrement moves on valid swap
+  G.moves=Math.max(0,(G.moves||1)-1);
+  m3UpdateMoves();
+  m3Play([{type:'swap',r:r1,c:c1,toR:r2,toC:c2,startT:now,dur},{type:'swap',r:r2,c:c2,toR:r1,toC:c1,startT:now,dur}],()=>{
     const t=G.board[r1][c1];G.board[r1][c1]=G.board[r2][c2];G.board[r2][c2]=t;
-    G.combo=0; m3ProcessMatches();
+    // swap specials map entries
+    const sp1=G.specials.get(k1),sp2=G.specials.get(k2);
+    G.specials.delete(k1);G.specials.delete(k2);
+    if(sp1)G.specials.set(k2,sp1); if(sp2)G.specials.set(k1,sp2);
+    // force-activate any specials that were just swapped (even with no natural match)
+    const extra=new Set();
+    if(hadSp1)extra.add(k2); if(hadSp2)extra.add(k1);
+    G.lastSwap={r1,c1,r2,c2}; G.combo=0;
+    m3ProcessMatches(extra);
   });
 }
 
 function findM3Matches(board){
+  // Simple set of matched keys — used for swap validation & stuck check
   const s=new Set();
   for(let r=0;r<M3_ROWS;r++) for(let c=0;c<M3_COLS-2;c++){
     const v=board[r][c];if(v<0)continue;
-    if(board[r][c+1]===v&&board[r][c+2]===v){
-      let l=3;while(c+l<M3_COLS&&board[r][c+l]===v)l++;
-      for(let k=0;k<l;k++)s.add(r*M3_COLS+c+k);
-    }
+    if(board[r][c+1]===v&&board[r][c+2]===v){let l=3;while(c+l<M3_COLS&&board[r][c+l]===v)l++;for(let k=0;k<l;k++)s.add(r*M3_COLS+c+k);}
   }
   for(let c=0;c<M3_COLS;c++) for(let r=0;r<M3_ROWS-2;r++){
     const v=board[r][c];if(v<0)continue;
-    if(board[r+1][c]===v&&board[r+2][c]===v){
-      let l=3;while(r+l<M3_ROWS&&board[r+l][c]===v)l++;
-      for(let k=0;k<l;k++)s.add((r+k)*M3_COLS+c);
-    }
+    if(board[r+1][c]===v&&board[r+2][c]===v){let l=3;while(r+l<M3_ROWS&&board[r+l][c]===v)l++;for(let k=0;k<l;k++)s.add((r+k)*M3_COLS+c);}
   }
   return[...s];
 }
 
-function m3ProcessMatches(){
-  const matches=findM3Matches(G.board);
-  if(!matches.length){G.animating=false;renderMatch3();checkM3Stuck();return;}
-  G.combo++;
-  G.score+=matches.length*(G.combo>1?G.combo*2:1);
-  updateScore(G.score);
-  if(G.combo>1) G.m3Combo={txt:`COMBO ×${G.combo}!`,till:Date.now()+900};
+function findM3Runs(board){
+  // Returns [{cells:[{r,c}], dir:'h'|'v', len, color}] for runs of 3+
+  const runs=[];
+  for(let r=0;r<M3_ROWS;r++){
+    let c=0; while(c<M3_COLS){
+      const v=board[r][c];if(v<0){c++;continue;}
+      let l=1;while(c+l<M3_COLS&&board[r][c+l]===v)l++;
+      if(l>=3)runs.push({cells:Array.from({length:l},(_,k)=>({r,c:c+k})),dir:'h',len:l,color:v});
+      c+=l;
+    }
+  }
+  for(let c=0;c<M3_COLS;c++){
+    let r=0; while(r<M3_ROWS){
+      const v=board[r][c];if(v<0){r++;continue;}
+      let l=1;while(r+l<M3_ROWS&&board[r+l][c]===v)l++;
+      if(l>=3)runs.push({cells:Array.from({length:l},(_,k)=>({r:r+k,c})),dir:'v',len:l,color:v});
+      r+=l;
+    }
+  }
+  return runs;
+}
 
-  // ── pop animation ──
-  const now=Date.now();
-  const popAnims=matches.map(idx=>{
-    const r2=Math.floor(idx/M3_COLS),c2=idx%M3_COLS;
-    return{type:'pop',r:r2,c:c2,gem:G.board[r2][c2],startT:now,dur:270};
+function m3ExpandSpecials(baseKeys){
+  // Chain-activates any specials in baseKeys, returns {allKeys, blasts}
+  const allKeys=new Set(baseKeys), blasts=[], visited=new Set();
+  function activate(r,c,sp){
+    if(visited.has(r*M3_COLS+c))return; visited.add(r*M3_COLS+c);
+    blasts.push({r,c,btype:sp.type,col:M3_COLORS[sp.color]});
+    switch(sp.type){
+      case 'row': for(let cc=0;cc<M3_COLS;cc++)allKeys.add(r*M3_COLS+cc); break;
+      case 'col': for(let rr=0;rr<M3_ROWS;rr++)allKeys.add(rr*M3_COLS+c); break;
+      case 'cross':
+        for(let cc=0;cc<M3_COLS;cc++)allKeys.add(r*M3_COLS+cc);
+        for(let rr=0;rr<M3_ROWS;rr++)allKeys.add(rr*M3_COLS+c); break;
+      case 'rainbow':
+        for(let rr=0;rr<M3_ROWS;rr++)for(let cc=0;cc<M3_COLS;cc++)
+          if(G.board[rr][cc]===sp.color)allKeys.add(rr*M3_COLS+cc); break;
+    }
+  }
+  baseKeys.forEach(k=>{if(G.specials.has(k)){const sp=G.specials.get(k);activate(Math.floor(k/M3_COLS),k%M3_COLS,sp);}});
+  // chain reactions
+  let changed=true;
+  while(changed){changed=false;allKeys.forEach(k=>{if(!visited.has(k)&&G.specials.has(k)){activate(Math.floor(k/M3_COLS),k%M3_COLS,G.specials.get(k));changed=true;}});}
+  return{allKeys,blasts};
+}
+
+function m3DetermineNewSpecials(runs){
+  // Determine new specials from run shapes; returns [{r,c,type,color}]
+  const out=[], placed=new Set();
+  const cellDirs=new Map(); // key → Set of dirs (for T/L detection)
+  runs.forEach(run=>run.cells.forEach(({r,c})=>{const k=r*M3_COLS+c;if(!cellDirs.has(k))cellDirs.set(k,new Set());cellDirs.get(k).add(run.dir);}));
+  const swCells=G.lastSwap?[{r:G.lastSwap.r1,c:G.lastSwap.c1},{r:G.lastSwap.r2,c:G.lastSwap.c2}]:[];
+  function pickCell(cells){return cells.find(({r,c})=>swCells.some(s=>s.r===r&&s.c===c))||cells[Math.floor(cells.length/2)];}
+  runs.forEach(run=>{
+    let type=null,target=null;
+    if(run.len>=5){type='rainbow';target=pickCell(run.cells);}
+    else if(run.len===4){type=run.dir==='h'?'row':'col';target=pickCell(run.cells);}
+    else if(run.len===3){
+      const junc=run.cells.find(({r,c})=>cellDirs.get(r*M3_COLS+c)?.size>=2);
+      if(junc){type='cross';target=junc;}
+    }
+    if(type&&target){
+      const k=target.r*M3_COLS+target.c;
+      if(!placed.has(k)){placed.add(k);out.push({r:target.r,c:target.c,type,color:run.color});}
+    }
   });
-  matches.forEach(idx=>{G.board[Math.floor(idx/M3_COLS)][idx%M3_COLS]=-1;});
+  return out;
+}
 
-  m3Play(popAnims,()=>{
-    // ── gravity + drop animation ──
-    const dropAnims=[], t0=Date.now();
+function m3ProcessMatches(extraKeys=new Set()){
+  const runs=findM3Runs(G.board);
+  const baseMatched=new Set(extraKeys);
+  runs.forEach(run=>run.cells.forEach(({r,c})=>baseMatched.add(r*M3_COLS+c)));
+  if(!baseMatched.size){
+    G.animating=false;renderMatch3();
+    if(G.moves<=0){
+      const msg=(lang==='en'?'Score: ':'分数：')+G.score;
+      setTimeout(()=>showWin('💎',t('gameOver'),'lose',msg),400);
+    } else { checkM3Stuck(); }
+    return;
+  }
+  G.combo++;
+  const{allKeys,blasts}=m3ExpandSpecials(baseMatched);
+  const newSpecials=m3DetermineNewSpecials(runs);
+  const newSpKeys=new Set(newSpecials.map(s=>s.r*M3_COLS+s.c));
+  const toClear=new Set([...allKeys].filter(k=>!newSpKeys.has(k)));
+  G.score+=allKeys.size*(G.combo>1?G.combo*2:1);
+  updateScore(G.score);
+  if(G.combo>1)G.m3Combo={txt:`COMBO ×${G.combo}!`,till:Date.now()+900};
+  // show special name
+  if(newSpecials.length){
+    const names={row:'→ Row Bomb!',col:'↕ Col Bomb!',cross:'✦ Cross Bomb!',rainbow:'★ Rainbow!'};
+    updatePill(names[newSpecials[0].type]);
+    setTimeout(()=>{if(!G.animating)updatePill(t('playing'));},1200);
+  }
+  const now=Date.now(),blastDelay=blasts.length?0:0;
+  const anims=[];
+  blasts.forEach(b=>anims.push({type:'blast',r:b.r,c:b.c,btype:b.btype,col:b.col,startT:now,dur:320}));
+  [...toClear].forEach(k=>{
+    const r2=Math.floor(k/M3_COLS),c2=k%M3_COLS;
+    const sp=G.specials.get(k);
+    anims.push({type:'pop',r:r2,c:c2,gem:G.board[r2][c2],sp:sp||null,startT:now+(blasts.length?180:0),dur:blasts.length?300:270});
+  });
+  toClear.forEach(k=>{G.board[Math.floor(k/M3_COLS)][k%M3_COLS]=-1;G.specials.delete(k);});
+  newSpecials.forEach(({r,c,type,color})=>{G.board[r][c]=color;G.specials.set(r*M3_COLS+c,{type,color});});
+  m3Play(anims,()=>{
+    const dropAnims=[],t0=Date.now();
     for(let c=0;c<M3_COLS;c++){
       const origCol=G.board.map(r=>r[c]);
-      // collect surviving gems in order (top→bottom)
       const surviving=[];
       for(let r=0;r<M3_ROWS;r++) if(origCol[r]>=0) surviving.push({origR:r,v:origCol[r]});
       const newCount=M3_ROWS-surviving.length;
-      // fill new gems at top
       for(let i=0;i<newCount;i++){
         G.board[i][c]=Math.floor(Math.random()*M3_GEMS.length);
-        // new gems start at y = -C/2 (just off-screen top), fall to row i
         dropAnims.push({type:'drop',r:i,c,fromRows:i+1,startT:t0,dur:170+(i+1)*28});
       }
-      // shift surviving gems down
       surviving.forEach(({origR,v},i)=>{
         const newR=newCount+i;
+        const spk=origR*M3_COLS+c;
+        if(G.specials.has(spk)){const sp=G.specials.get(spk);G.specials.delete(spk);G.specials.set(newR*M3_COLS+c,sp);}
         G.board[newR][c]=v;
         const fell=newR-origR;
-        if(fell>0) dropAnims.push({type:'drop',r:newR,c,fromRows:fell,startT:t0,dur:155+fell*40});
+        if(fell>0)dropAnims.push({type:'drop',r:newR,c,fromRows:fell,startT:t0,dur:155+fell*40});
       });
     }
+    // spawn-in animation for new specials (they're now in their gravity-settled positions)
+    newSpecials.forEach(({r,c})=>{
+      const spk=r*M3_COLS+c;
+      if(G.specials.has(spk))dropAnims.push({type:'spawn',r,c,startT:t0+80,dur:380});
+    });
     m3Play(dropAnims,()=>setTimeout(m3ProcessMatches,55));
   });
 }
 
 function checkM3Stuck(){
+  if(G.specials.size>0)return; // specials can always be activated
   const dirs=[[0,1],[1,0]];
   for(let r=0;r<M3_ROWS;r++) for(let c=0;c<M3_COLS;c++) for(const[dr,dc]of dirs){
     const nr=r+dr,nc=c+dc;if(nr>=M3_ROWS||nc>=M3_COLS)continue;
@@ -952,6 +1106,7 @@ function checkM3Stuck(){
   }
   updatePill(lang==='en'?'Reshuffling…':'重新洗牌…');
   setTimeout(()=>{
+    G.specials.clear();
     do{G.board=Array.from({length:M3_ROWS},()=>Array.from({length:M3_COLS},()=>Math.floor(Math.random()*M3_GEMS.length)));
     }while(findM3Matches(G.board).length>0);
     renderMatch3();updatePill(t('playing'));
